@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 const placeholderImages = {
   image1: require('../assets/1.png'),
@@ -66,6 +67,7 @@ const carouselData = [
 export default function WelcomeScreen() {
   const navigation = useNavigation();
   const [activeIndex, setActiveIndex] = useState(0);
+  const scrollViewRef = useRef(null);
   const { width: windowWidth } = useWindowDimensions();
 
   // Desktop check: Web platform and width > 768px
@@ -81,85 +83,210 @@ export default function WelcomeScreen() {
 
   const handleScroll = (event) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
-    // On desktop, the slide width is half the window width (approx), 
-    // but the carousel container might be smaller. 
-    // For simplicity, we use the slide width logic.
-    const slideWidth = isDesktop ? windowWidth * 0.5 : windowWidth;
+    // For desktop, we use a fixed width for slides (500), for mobile we use windowWidth
+    const slideWidth = isDesktop ? 500 : windowWidth;
     const index = Math.round(scrollPosition / slideWidth);
     setActiveIndex(index);
+  };
+
+  const scrollToIndex = (index) => {
+    if (index >= 0 && index < carouselData.length) {
+      const slideWidth = isDesktop ? 500 : windowWidth;
+      scrollViewRef.current?.scrollTo({ x: index * slideWidth, animated: true });
+      setActiveIndex(index);
+    }
+  };
+
+  const handleNext = () => {
+    scrollToIndex(activeIndex + 1);
+  };
+
+  const handlePrev = () => {
+    scrollToIndex(activeIndex - 1);
   };
 
   // --- DESKTOP LAYOUT (SPLIT VIEW) ---
   if (isDesktop) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { flexDirection: 'row' }]}>
+      <View style={{ flex: 1, backgroundColor: cores.light }}>
+        {/* Navbar */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 64, paddingVertical: 32 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Logo */}
+            <Image
+              source={require('../../assets/favicon.png')}
+              style={{ width: 40, height: 40, marginRight: 12 }}
+              resizeMode="contain"
+            />
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: cores.secondary }}>CertifAI</Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleLogin}
+            style={{
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+              borderRadius: 100,
+              backgroundColor: 'white',
+              // Border removed
+            }}
+          >
+            <Text style={{ color: cores.secondary, fontWeight: '600', fontSize: 16 }}>Entrar</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.container, { flexDirection: 'row', backgroundColor: 'transparent' }]}>
           {/* Left Column: Text & CTA */}
-          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 64 }}>
-            <View style={{ maxWidth: 480, alignSelf: 'flex-end', width: '100%' }}>
-              <Text style={[styles.title, { textAlign: 'left', paddingHorizontal: 0, fontSize: 36 }]}>Bem-vindo(a) ao CertifAI</Text>
-              <Text style={{ fontSize: 18, color: cores.gray500, marginBottom: 40, lineHeight: 28 }}>
-                Sua jornada para a aprovação começa aqui. Estude com inteligência artificial e conquiste sua certificação com eficiência.
+          <View style={{ flex: 1, justifyContent: 'center', paddingLeft: 80, paddingRight: 40 }}>
+            <View style={{ maxWidth: 600 }}>
+              <View style={{ backgroundColor: cores.primaryLight, alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, marginBottom: 32 }}>
+                <Text style={{ color: cores.primary, fontWeight: '700', fontSize: 14, letterSpacing: 0.5 }}>APROVADO POR +1.000 ALUNOS</Text>
+              </View>
+
+              <Text style={{ fontSize: 64, fontWeight: '800', color: cores.secondary, lineHeight: 72, marginBottom: 24, letterSpacing: -1.5 }}>
+                Sua certificação financeira <Text style={{ color: cores.primary }}>garantida.</Text>
               </Text>
 
-              <View style={{ width: '100%' }}>
+              <Text style={{ fontSize: 20, color: cores.gray500, marginBottom: 48, lineHeight: 32, maxWidth: 500 }}>
+                A plataforma mais completa para CPA, C-PRO R, C-PRO I e muito mais. Estude com inteligência artificial e passe de primeira.
+              </Text>
+
+              <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                 <TouchableOpacity
-                  style={styles.button}
+                  style={[styles.button, { width: 'auto', paddingHorizontal: 40, height: 60 }]}
                   onPress={handleStartOnboarding}
                 >
-                  <Text style={styles.buttonText}>Começar Agora</Text>
+                  <Text style={[styles.buttonText, { fontSize: 18 }]}>Começar Agora</Text>
                 </TouchableOpacity>
-                <Text onPress={handleLogin} style={[styles.buttonSecondaryText, { textAlign: 'left', marginLeft: 4 }]}>Já tenho uma conta</Text>
+
+                <Text style={{ color: cores.gray500, fontSize: 14, marginLeft: 16 }}>
+                  Comece gratuitamente.
+                </Text>
               </View>
             </View>
           </View>
 
           {/* Right Column: Carousel */}
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: cores.gray100 }}>
-            <View style={{ width: '100%', height: '100%', justifyContent: 'center' }}>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={handleScroll}
-                style={{ flexGrow: 0 }}
-              >
-                {carouselData.map((item) => (
-                  <View key={item.id} style={{ width: windowWidth * 0.5, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 }}>
-                    <Image
-                      source={item.image}
-                      style={{ width: '80%', height: 500, borderRadius: 16, marginBottom: 24 }}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.slideTitle}>{item.title}</Text>
-                    <Text style={styles.slideDescription}>{item.description}</Text>
-                  </View>
-                ))}
-              </ScrollView>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+            {/* Decorative Elements */}
+            <View style={{ position: 'absolute', width: 600, height: 600, borderRadius: 300, opacity: 0.6, top: '5%', right: '5%' }} />
 
-              <View style={styles.pagination}>
-                {carouselData.map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.paginationDot,
-                      index === activeIndex && styles.paginationDotActive,
-                    ]}
-                  />
-                ))}
+            {/* Desktop Carousel */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
+              {/* Prev Button */}
+              <TouchableOpacity
+                onPress={handlePrev}
+                disabled={activeIndex === 0}
+                style={{
+                  padding: 12,
+                  borderRadius: 50,
+                  backgroundColor: 'white',
+                  opacity: activeIndex === 0 ? 0.5 : 1,
+                  shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2
+                }}
+              >
+                <ChevronLeft size={32} color={cores.secondary} />
+              </TouchableOpacity>
+
+              <View style={{ width: 500, alignItems: 'center' }}>
+                <ScrollView
+                  ref={scrollViewRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={handleScroll}
+                  style={{ width: 500, height: 600 }} // Fixed width for desktop carousel
+                >
+                  {carouselData.map((item) => (
+                    <View key={item.id} style={{ width: 500, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                      <Image
+                        source={item.image}
+                        style={{ width: '100%', height: 400, marginBottom: 32, borderRadius: 24 }}
+                        resizeMode="contain"
+                      />
+                      <Text style={{ fontSize: 28, fontWeight: 'bold', color: cores.secondary, textAlign: 'center', marginBottom: 16 }}>{item.title}</Text>
+                      <Text style={{ fontSize: 18, color: cores.gray500, textAlign: 'center', lineHeight: 28, maxWidth: 400 }}>{item.description}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+
+                {/* Pagination */}
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 32 }}>
+                  {carouselData.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.paginationDot,
+                        index === activeIndex && styles.paginationDotActive,
+                        { width: 12, height: 12, borderRadius: 6 } // Slightly larger dots for desktop
+                      ]}
+                    />
+                  ))}
+                </View>
               </View>
+
+              {/* Next Button */}
+              <TouchableOpacity
+                onPress={handleNext}
+                disabled={activeIndex === carouselData.length - 1}
+                style={{
+                  padding: 12,
+                  borderRadius: 50,
+                  backgroundColor: 'white',
+                  opacity: activeIndex === carouselData.length - 1 ? 0.5 : 1,
+                  shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2
+                }}
+              >
+                <ChevronRight size={32} color={cores.secondary} />
+              </TouchableOpacity>
             </View>
           </View>
         </View>
-      </SafeAreaView>
+
+        {/* Footer */}
+        <View style={{ padding: 32, borderTopWidth: 1, borderTopColor: cores.gray100, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={{ color: cores.gray500, fontSize: 12 }}>Certifai Tecnologia LTDA</Text>
+            <Text style={{ color: cores.gray500, fontSize: 12 }}>CNPJ: 63.594.251/0001-61</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 24 }}>
+            <Text style={{ color: cores.gray500, fontSize: 12 }}>contato@certifai.com.br</Text>
+          </View>
+        </View>
+      </View>
     );
   }
 
-  // --- MOBILE LAYOUT (ORIGINAL) ---
+  // --- MOBILE LAYOUT (UPDATED) ---
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Bem-vindo(a) ao CertifAI</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image
+            source={require('../../assets/favicon.png')}
+            style={{ width: 32, height: 32, marginRight: 8 }}
+            resizeMode="contain"
+          />
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: cores.secondary }}>CertifAI</Text>
+        </View>
+        <TouchableOpacity onPress={handleLogin} style={{ padding: 8 }}>
+          <Text style={{ color: cores.secondary, fontWeight: '600', fontSize: 14 }}>Entrar</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        <View style={{ paddingHorizontal: 24, paddingTop: 5 }}>
+          <View style={{ backgroundColor: cores.primaryLight, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 100, marginBottom: 5 }}>
+            <Text style={{ color: cores.primary, fontWeight: '700', fontSize: 12, letterSpacing: 0.5 }}>+1.000 ALUNOS</Text>
+          </View>
+
+          <Text style={{ fontSize: 42, fontWeight: '800', color: cores.secondary, lineHeight: 48, marginBottom: 16, letterSpacing: -1 }}>
+            Sua certificação <Text style={{ color: cores.primary }}>garantida.</Text>
+          </Text>
+
+          <Text style={{ fontSize: 18, color: cores.gray500, marginBottom: 32, lineHeight: 28 }}>
+            Estude com inteligência artificial e passe de primeira na CPA, C-PRO R e C-PRO I.
+          </Text>
+        </View>
 
         <View style={styles.carouselContainer}>
           <ScrollView
@@ -194,16 +321,25 @@ export default function WelcomeScreen() {
             ))}
           </View>
         </View>
-      </View>
 
-      <View style={styles.footer}>
+        {/* Mobile Footer Info */}
+        <View style={{ padding: 24, paddingBottom: 40, alignItems: 'center', opacity: 0.6 }}>
+          <Text style={{ color: cores.gray500, fontSize: 12, textAlign: 'center', marginBottom: 4 }}>Certifai Tecnologia LTDA</Text>
+          <Text style={{ color: cores.gray500, fontSize: 12, textAlign: 'center', marginBottom: 8 }}>CNPJ: 63.594.251/0001-61</Text>
+          <Text style={{ color: cores.gray500, fontSize: 12, textAlign: 'center', marginBottom: 2 }}>contato@certifai.com.br</Text>
+          <View style={{ flexDirection: 'row', gap: 16 }}>
+          </View>
+        </View>
+      </ScrollView>
+
+      <View style={[styles.footer, { borderTopWidth: 0 }]}>
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.button, { height: 56 }]}
           onPress={handleStartOnboarding}
         >
-          <Text style={styles.buttonText}>Começar</Text>
+          <Text style={[styles.buttonText, { fontSize: 18 }]}>Começar Agora</Text>
         </TouchableOpacity>
-        <Text onPress={handleLogin} style={styles.buttonSecondaryText}>Já tenho uma conta</Text>
+        <Text style={{ textAlign: 'center', marginTop: 16, color: cores.gray500, fontSize: 14 }}>Comece gratuitamente.</Text>
       </View>
     </SafeAreaView>
   );
