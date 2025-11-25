@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         width: '100%',
-        maxWidth: 480, // Constrain to a comfortable mobile width
+        maxWidth: 1200, // Desktop-ready width
         backgroundColor: '#fff',
         // Add shadow to make it pop against the background
         shadowColor: "#000",
@@ -37,11 +37,9 @@ const styles = StyleSheet.create({
             width: 0,
             height: 2,
         },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.05,
         shadowRadius: 10,
-        elevation: 5,
-        // Ensure it takes full height
+        elevation: 2,
         height: '100%',
-        overflow: 'hidden', // Clip content to rounded corners if we added them
     },
 });

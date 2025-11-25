@@ -12,17 +12,18 @@ import {
   FlatList,
   Animated,
   TextInput,
+  useWindowDimensions, // Import added
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useOnboarding } from '../context/OnboardingContext';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line, G, Text as SvgText } from 'react-native-svg';
-import { 
-  Sparkles, Check, Lock, Briefcase, TrendingUp, Brain, 
-  Layers, ArrowLeft, Target, BarChart3, UserCheck, 
+import {
+  Sparkles, Check, Lock, Briefcase, TrendingUp, Brain,
+  Layers, ArrowLeft, Target, BarChart3, UserCheck,
   BookOpen, MessageSquare, Shield, X, User
 } from 'lucide-react-native';
 
-import { supabase, useAuth } from '../context/AuthContext'; 
+import { supabase, useAuth } from '../context/AuthContext';
 import LoginAuth from '../context/LoginAuth';
 
 // ☆ IMPORTANTE: Importando o Modal Real de Paywall
@@ -112,10 +113,10 @@ const ProductivityGraphCard = () => {
               </LinearGradient>
             </Defs>
             {[1, 2, 3, 4].map(i => (
-               <Line key={`v-${i}`} x1={i * 60} y1="20" x2={i * 60} y2="200" stroke={cores.gray200} strokeWidth="1" strokeDasharray="4 4" />
+              <Line key={`v-${i}`} x1={i * 60} y1="20" x2={i * 60} y2="200" stroke={cores.gray200} strokeWidth="1" strokeDasharray="4 4" />
             ))}
             {[1, 2, 3].map(i => (
-               <Line key={`h-${i}`} x1="20" y1={i * 50} x2="280" y2={i * 50} stroke={cores.gray200} strokeWidth="1" strokeDasharray="4 4" />
+              <Line key={`h-${i}`} x1="20" y1={i * 50} x2="280" y2={i * 50} stroke={cores.gray200} strokeWidth="1" strokeDasharray="4 4" />
             ))}
             <Path
               d={`M ${start.x} ${start.y} Q 120 170 ${endBad.x} ${endBad.y}`}
@@ -158,9 +159,7 @@ const ProductivityGraphCard = () => {
   );
 };
 
-const { width: screenWidth } = Dimensions.get('window');
 const CARD_MARGIN = 16;
-const CARD_WIDTH = (screenWidth - 100) * 0.8; 
 const features = [
   { icon: Brain, title: "Cases Dissertativos", subtitle: "Corrija seu raciocínio em cenários reais." },
   { icon: BookOpen, title: "Questões Interativas", subtitle: "Aprenda com desafios dinâmicos." },
@@ -170,8 +169,9 @@ const features = [
   { icon: MessageSquare, title: "Ajuda Personalizada", subtitle: "Tire dúvidas 24/7 com o Professor IA." },
 ];
 const duplicatedFeatures = [...features, ...features];
-const FeatureCard = ({ icon: Icon, title, subtitle }) => (
-  <View style={[styles.featureCard, { width: CARD_WIDTH }]}>
+
+const FeatureCard = ({ icon: Icon, title, subtitle, cardWidth }) => (
+  <View style={[styles.featureCard, { width: cardWidth }]}>
     <View style={styles.featureIconContainer}>
       <Icon size={26} color={cores.primary} />
     </View>
@@ -181,13 +181,19 @@ const FeatureCard = ({ icon: Icon, title, subtitle }) => (
     </View>
   </View>
 );
+
 const AutoCarousel = () => {
+  const { width } = useWindowDimensions();
+  const screenWidth = Math.min(width, 1200); // Clamp to max width
+  const cardWidth = (screenWidth - 48) * 0.8; // Adjust calculation based on padding
+
   const flatListRef = useRef(null);
   const scrollOffset = useRef(0);
-  const singleListWidth = (CARD_WIDTH + CARD_MARGIN) * features.length;
+  const singleListWidth = (cardWidth + CARD_MARGIN) * features.length;
+
   useEffect(() => {
     const scroll = () => {
-      scrollOffset.current += 1; 
+      scrollOffset.current += 1;
       if (scrollOffset.current >= singleListWidth) {
         scrollOffset.current = 0;
         flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -195,20 +201,21 @@ const AutoCarousel = () => {
         flatListRef.current?.scrollToOffset({ offset: scrollOffset.current, animated: false });
       }
     };
-    const timer = setInterval(scroll, 16); 
+    const timer = setInterval(scroll, 16);
     return () => clearInterval(timer);
-  }, []);
+  }, [singleListWidth]);
+
   return (
-    <View style={styles.carouselWrapper}>
+    <View style={[styles.carouselWrapper, { width: screenWidth + 48, marginLeft: -24 }]}>
       <FlatList
         ref={flatListRef}
         data={duplicatedFeatures}
-        renderItem={({ item }) => <FeatureCard icon={item.icon} title={item.title} subtitle={item.subtitle} />}
+        renderItem={({ item }) => <FeatureCard icon={item.icon} title={item.title} subtitle={item.subtitle} cardWidth={cardWidth} />}
         keyExtractor={(item, index) => `${item.title}-${index}`}
         horizontal
         showsHorizontalScrollIndicator={false}
         scrollEnabled={false}
-        contentContainerStyle={{ paddingHorizontal: (screenWidth - CARD_WIDTH) / 2, gap: CARD_MARGIN }}
+        contentContainerStyle={{ paddingHorizontal: (screenWidth - cardWidth) / 2, gap: CARD_MARGIN }}
       />
     </View>
   );
@@ -220,12 +227,12 @@ const AutoCarousel = () => {
 export default function OnboardingFlowScreen() {
   const navigation = useNavigation();
   const { onboardingData, updateData } = useOnboarding();
-  const { user, isPro } = useAuth(); 
+  const { user, isPro } = useAuth();
 
   // Começa no passo 8 (Paywall) se já tiver usuário real
   const initialStep = (user && !user.is_anonymous) ? 8 : 1;
   const [step, setStep] = useState(initialStep);
-  
+
   const [motivation, setMotivation] = useState(null);
   const [certification, setCertification] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -289,7 +296,7 @@ export default function OnboardingFlowScreen() {
               return (
                 <TouchableOpacity
                   key={key}
-                  style={[ styles.optionBtn, isSelected && !isVerified && styles.optionSelected, isVerified && key === dummyQuestion.answer && styles.optionCorrect, isVerified && isSelected && key !== dummyQuestion.answer && styles.optionIncorrect, ]}
+                  style={[styles.optionBtn, isSelected && !isVerified && styles.optionSelected, isVerified && key === dummyQuestion.answer && styles.optionCorrect, isVerified && isSelected && key !== dummyQuestion.answer && styles.optionIncorrect,]}
                   disabled={isVerified} onPress={() => setSelectedAnswer(key)}
                 >
                   <View style={styles.iconContainer}>
@@ -304,10 +311,10 @@ export default function OnboardingFlowScreen() {
             })}
             {isVerified && explanationData && (
               <ScrollView style={styles.explanationScroll}>
-                <View style={[ styles.explanationBox, isCorrect ? styles.explanationBoxInfo : styles.explanationBoxError ]}>
-                  <View style={[ styles.explanationHeader, isCorrect ? styles.explanationHeaderInfo : styles.explanationHeaderError ]}>
+                <View style={[styles.explanationBox, isCorrect ? styles.explanationBoxInfo : styles.explanationBoxError]}>
+                  <View style={[styles.explanationHeader, isCorrect ? styles.explanationHeaderInfo : styles.explanationHeaderError]}>
                     <Sparkles size={16} color={isCorrect ? cores.primary : cores.red600} />
-                    <Text style={[ styles.explanationHeaderText, isCorrect ? styles.explanationHeaderTextInfo : styles.explanationHeaderTextError ]}>{explanationData.title}</Text>
+                    <Text style={[styles.explanationHeaderText, isCorrect ? styles.explanationHeaderTextInfo : styles.explanationHeaderTextError]}>{explanationData.title}</Text>
                   </View>
                   <MarkdownRenderer text={explanationData.text} style={styles.explanationText} />
                 </View>
@@ -339,7 +346,7 @@ export default function OnboardingFlowScreen() {
 
       case 6:
         return (
-          <View style={[styles.stepContainer, {alignItems: 'stretch'}]}>
+          <View style={[styles.stepContainer, { alignItems: 'stretch' }]}>
             <Text style={styles.title}>Como podemos te chamar?</Text>
             <Text style={styles.subtitle}>Seu nome será usado para personalizar sua jornada.</Text>
             <View style={styles.inputContainer}>
@@ -360,10 +367,10 @@ export default function OnboardingFlowScreen() {
       case 7:
         return (
           <View style={[styles.stepContainer, { alignItems: 'stretch' }]}>
-            <LoginAuth 
+            <LoginAuth
               onLoginSuccess={() => {
                 console.log("Onboarding: Login com sucesso! Avançando para o Paywall.");
-                nextStep(); 
+                nextStep();
               }}
             />
           </View>
@@ -390,20 +397,20 @@ export default function OnboardingFlowScreen() {
               {isPro ? "Tudo pronto! 🚀" : "Finalizando..."}
             </Text>
             <Text style={styles.subtitle}>
-              {isPro 
-                ? "Sua assinatura Premium está ativa. Aproveite!" 
+              {isPro
+                ? "Sua assinatura Premium está ativa. Aproveite!"
                 : "Estamos preparando seu ambiente de estudos..."}
             </Text>
-            
+
             {/* Se for PRO, mostra botão de entrar direto */}
             {isPro && (
-                <TouchableOpacity 
-                  style={[styles.button, {backgroundColor: cores.primary}]} 
-                  onPress={handleCompleteOnboarding}
-                >
-                  <Check size={18} color={cores.light} />
-                  <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar o App</Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: cores.primary }]}
+                onPress={handleCompleteOnboarding}
+              >
+                <Check size={18} color={cores.light} />
+                <Text style={[styles.buttonText, { marginLeft: 10 }]}>Acessar o App</Text>
+              </TouchableOpacity>
             )}
 
             {/* ☆ AQUI ESTÁ A LÓGICA PEDIDA: ☆ */}
@@ -411,14 +418,14 @@ export default function OnboardingFlowScreen() {
             {/* O modal tem seu próprio botão "X" (fechar). */}
             {/* Quando fecha (onClose), chamamos handleCompleteOnboarding para ir pra Home (como Free). */}
             {!isPro && (
-               <PaywallModal 
-                 visible={true} 
-                 onClose={handleCompleteOnboarding} 
-               />
+              <PaywallModal
+                visible={true}
+                onClose={handleCompleteOnboarding}
+              />
             )}
           </View>
         );
-        
+
       default:
         return (
           <View style={styles.stepContainer}>
@@ -468,9 +475,9 @@ export default function OnboardingFlowScreen() {
       case 6:
         const isNameValid = name.trim().length > 1;
         return (
-          <TouchableOpacity 
-            style={[styles.button, !isNameValid && styles.buttonDisabled]} 
-            onPress={() => nextStep({ name: name.trim() })} 
+          <TouchableOpacity
+            style={[styles.button, !isNameValid && styles.buttonDisabled]}
+            onPress={() => nextStep({ name: name.trim() })}
             disabled={!isNameValid}
           >
             <Text style={styles.buttonText}>Continuar</Text>
@@ -482,7 +489,7 @@ export default function OnboardingFlowScreen() {
 
       case 8:
         return null; // O Paywall (Modal) ou o botão PRO controlam o fluxo
-        
+
       default:
         return null;
     }
@@ -552,11 +559,11 @@ const styles = StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 5, },
   legendText: { color: cores.gray500, fontSize: 12, fontWeight: '500', },
   graphSubtitle: { fontSize: 14, color: cores.gray500, textAlign: 'center', marginTop: 20, lineHeight: 20, },
-  carouselWrapper: { height: 220, width: screenWidth, marginBottom: 24, justifyContent: 'center', marginLeft: -24, marginRight: -24, marginTop: 20 },
+  carouselWrapper: { height: 220, marginBottom: 24, justifyContent: 'center', marginTop: 20 },
   featureCard: { backgroundColor: cores.light, borderRadius: 20, padding: 24, height: 150, justifyContent: 'space-between', borderWidth: 0.5, borderColor: cores.gray200, shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3, alignItems: 'center' },
-  featureIconContainer: { width: 48, height: 48, borderRadius: 24, backgroundColor: cores.primaryLight, justifyContent: 'center', alignItems: 'center', marginBottom: 5},
+  featureIconContainer: { width: 48, height: 48, borderRadius: 24, backgroundColor: cores.primaryLight, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
   featureTitle: { fontSize: 15, fontWeight: 'bold', color: cores.secondary, textAlign: 'center' },
-  featureSubtitle: { fontSize: 11, color: cores.gray500, marginTop: 4, lineHeight: 20, marginBottom: 5, textAlign: 'center'},
+  featureSubtitle: { fontSize: 11, color: cores.gray500, marginTop: 4, lineHeight: 20, marginBottom: 5, textAlign: 'center' },
   paywallPlaceholder: { width: '100%', borderRadius: 16, borderWidth: 2, borderColor: cores.gray100, padding: 24, alignItems: 'center', backgroundColor: cores.light },
   paywallPlaceholderText: { fontSize: 14, color: cores.gray500, textAlign: 'center', fontStyle: 'italic', marginBottom: 24, lineHeight: 20 },
   inputContainer: {
@@ -565,14 +572,14 @@ const styles = StyleSheet.create({
     borderColor: cores.gray100,
     width: '100%', // Garante a largura total
   },
-  inputIcon: { 
-    marginRight: 8 
+  inputIcon: {
+    marginRight: 8
   },
-  input: { 
-    flex: 1, 
-    height: 50, 
-    fontSize: 16, 
-    color: cores.secondary 
+  input: {
+    flex: 1,
+    height: 50,
+    fontSize: 16,
+    color: cores.secondary
   },
   button: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', backgroundColor: cores.primary, width: '100%' },
   buttonSecondary: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', backgroundColor: cores.light, borderWidth: 1.5, borderColor: cores.gray200, width: '100%', marginTop: 12 },

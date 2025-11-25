@@ -1,24 +1,23 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
   ScrollView,
-  Dimensions,
-  Image // Importar o componente Image
+  useWindowDimensions, // Importar useWindowDimensions
+  Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const placeholderImages = {
-  image1: require('../assets/1.png'), 
+  image1: require('../assets/1.png'),
   image2: require('../assets/2.png'),
   image3: require('../assets/3.png'),
   image4: require('../assets/4.png'),
   image5: require('../assets/5.png'),
 };
-
 
 // Paleta de cores EXATAMENTE IGUAL ao Onboarding
 const cores = {
@@ -28,7 +27,7 @@ const cores = {
   gray100: '#F1F5F9',
   gray500: '#64748B',
   gray200: '#E2E8F0',
-  primaryLight: '#E6F8EB', 
+  primaryLight: '#E6F8EB',
 };
 
 // Dados para o carrossel, agora com a referência das imagens
@@ -65,12 +64,10 @@ const carouselData = [
   },
 ];
 
-// Pega a largura da tela para o carrossel
-const { width: windowWidth } = Dimensions.get('window');
-
 export default function WelcomeScreen() {
   const navigation = useNavigation();
   const [activeIndex, setActiveIndex] = useState(0);
+  const { width: windowWidth } = useWindowDimensions(); // USANDO O HOOK
 
   const handleStartOnboarding = () => {
     navigation.navigate('OnboardingFlow');
@@ -92,7 +89,7 @@ export default function WelcomeScreen() {
         <Text style={styles.title}>Bem-vindo(a) ao CertifAI</Text>
 
         <View style={styles.carouselContainer}>
-          <ScrollView 
+          <ScrollView
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
@@ -102,9 +99,9 @@ export default function WelcomeScreen() {
             {carouselData.map((item) => (
               <View key={item.id} style={[styles.carouselSlide, { width: windowWidth }]}>
                 {/* Aqui usamos o componente Image com a source da imagem */}
-                <Image 
-                  source={item.image} 
-                  style={styles.slideImage} 
+                <Image
+                  source={item.image}
+                  style={styles.slideImage}
                   resizeMode="contain" // ou "cover", dependendo de como quer que a imagem se ajuste
                 />
                 <Text style={styles.slideTitle}>{item.title}</Text>
@@ -128,8 +125,8 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity 
-          style={styles.button} 
+        <TouchableOpacity
+          style={styles.button}
           onPress={handleStartOnboarding}
         >
           <Text style={styles.buttonText}>Começar</Text>
@@ -166,7 +163,7 @@ const styles = StyleSheet.create({
     //
   },
   carouselSlide: {
-    width: windowWidth,
+    // width: windowWidth, // REMOVIDO DAQUI, PASSADO INLINE
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
@@ -213,25 +210,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: cores.gray100,
   },
-  button: { 
-    paddingVertical: 14, 
-    borderRadius: 12, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    flexDirection: 'row', 
-    backgroundColor: cores.primary, 
+  button: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    backgroundColor: cores.primary,
     width: '100%',
   },
-  buttonSecondaryText: { 
+  buttonSecondaryText: {
     marginTop: 12,
-    color: cores.gray500, 
-    fontSize: 16, 
+    color: cores.gray500,
+    fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center'
   },
-  buttonText: { 
-    color: cores.light, 
-    fontSize: 16, 
+  buttonText: {
+    color: cores.light,
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
