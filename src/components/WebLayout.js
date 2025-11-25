@@ -22,24 +22,16 @@ export const WebLayout = ({ children }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f0f2f5', // Neutral background for the outer area
         alignItems: 'center',
         justifyContent: 'center',
+        // Removed background color to let the app's background show through
     },
     content: {
         flex: 1,
         width: '100%',
         maxWidth: 1200, // Desktop-ready width
-        backgroundColor: '#fff',
-        // Add shadow to make it pop against the background
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
         height: '100%',
+        // Removed shadows, border radius, and background color
+        // This makes the container "invisible" but keeps the layout constrained
     },
 });

@@ -6,8 +6,9 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
-  useWindowDimensions, // Importar useWindowDimensions
-  Image
+  useWindowDimensions,
+  Image,
+  Platform
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
@@ -19,7 +20,6 @@ const placeholderImages = {
   image5: require('../assets/5.png'),
 };
 
-// Paleta de cores EXATAMENTE IGUAL ao Onboarding
 const cores = {
   primary: '#00C853',
   light: '#FFFFFF',
@@ -30,35 +30,34 @@ const cores = {
   primaryLight: '#E6F8EB',
 };
 
-// Dados para o carrossel, agora com a referência das imagens
 const carouselData = [
   {
     id: '1',
-    image: placeholderImages.image1, // Tela inicial
+    image: placeholderImages.image1,
     title: 'Todas as Certificações',
     description: 'Acesse material completo e personalizado para as principais certificações.'
   },
   {
     id: '2',
-    image: placeholderImages.image2, // Questão Interativa
+    image: placeholderImages.image2,
     title: 'Questões Interativas',
     description: 'Teste seu conhecimento com milhares de questões práticas e interativas.'
   },
   {
     id: '3',
-    image: placeholderImages.image3, // Revisão Case Prático
+    image: placeholderImages.image3,
     title: 'Cases Dissertativos',
     description: 'Treine com casos reais e aprimore sua escrita e capacidade analítica.'
   },
   {
     id: '4',
-    image: placeholderImages.image4, // Duas telas (pode representar flashcards ou visão geral)
+    image: placeholderImages.image4,
     title: 'Flashcards Inteligentes',
     description: 'Memorize conceitos-chave de forma rápida e eficaz com nosso sistema inteligente.'
   },
   {
     id: '5',
-    image: placeholderImages.image5, // Questão Interativa (ângulo diferente)
+    image: placeholderImages.image5,
     title: 'Questões de Prova',
     description: 'Enfrente questões no formato da prova para se preparar de verdade.'
   },
@@ -67,7 +66,10 @@ const carouselData = [
 export default function WelcomeScreen() {
   const navigation = useNavigation();
   const [activeIndex, setActiveIndex] = useState(0);
-  const { width: windowWidth } = useWindowDimensions(); // USANDO O HOOK
+  const { width: windowWidth } = useWindowDimensions();
+
+  // Desktop check: Web platform and width > 768px
+  const isDesktop = Platform.OS === 'web' && windowWidth > 768;
 
   const handleStartOnboarding = () => {
     navigation.navigate('OnboardingFlow');
@@ -79,10 +81,81 @@ export default function WelcomeScreen() {
 
   const handleScroll = (event) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
-    const index = Math.round(scrollPosition / windowWidth);
+    // On desktop, the slide width is half the window width (approx), 
+    // but the carousel container might be smaller. 
+    // For simplicity, we use the slide width logic.
+    const slideWidth = isDesktop ? windowWidth * 0.5 : windowWidth;
+    const index = Math.round(scrollPosition / slideWidth);
     setActiveIndex(index);
   };
 
+  // --- DESKTOP LAYOUT (SPLIT VIEW) ---
+  if (isDesktop) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.container, { flexDirection: 'row' }]}>
+          {/* Left Column: Text & CTA */}
+          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 64 }}>
+            <View style={{ maxWidth: 480, alignSelf: 'flex-end', width: '100%' }}>
+              <Text style={[styles.title, { textAlign: 'left', paddingHorizontal: 0, fontSize: 36 }]}>Bem-vindo(a) ao CertifAI</Text>
+              <Text style={{ fontSize: 18, color: cores.gray500, marginBottom: 40, lineHeight: 28 }}>
+                Sua jornada para a aprovação começa aqui. Estude com inteligência artificial e conquiste sua certificação com eficiência.
+              </Text>
+
+              <View style={{ width: '100%' }}>
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={handleStartOnboarding}
+                >
+                  <Text style={styles.buttonText}>Começar Agora</Text>
+                </TouchableOpacity>
+                <Text onPress={handleLogin} style={[styles.buttonSecondaryText, { textAlign: 'left', marginLeft: 4 }]}>Já tenho uma conta</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Right Column: Carousel */}
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: cores.gray100 }}>
+            <View style={{ width: '100%', height: '100%', justifyContent: 'center' }}>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={handleScroll}
+                style={{ flexGrow: 0 }}
+              >
+                {carouselData.map((item) => (
+                  <View key={item.id} style={{ width: windowWidth * 0.5, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 }}>
+                    <Image
+                      source={item.image}
+                      style={{ width: '80%', height: 500, borderRadius: 16, marginBottom: 24 }}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.slideTitle}>{item.title}</Text>
+                    <Text style={styles.slideDescription}>{item.description}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+
+              <View style={styles.pagination}>
+                {carouselData.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.paginationDot,
+                      index === activeIndex && styles.paginationDotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // --- MOBILE LAYOUT (ORIGINAL) ---
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -98,11 +171,10 @@ export default function WelcomeScreen() {
           >
             {carouselData.map((item) => (
               <View key={item.id} style={[styles.carouselSlide, { width: windowWidth }]}>
-                {/* Aqui usamos o componente Image com a source da imagem */}
                 <Image
                   source={item.image}
                   style={styles.slideImage}
-                  resizeMode="contain" // ou "cover", dependendo de como quer que a imagem se ajuste
+                  resizeMode="contain"
                 />
                 <Text style={styles.slideTitle}>{item.title}</Text>
                 <Text style={styles.slideDescription}>{item.description}</Text>
@@ -163,16 +235,14 @@ const styles = StyleSheet.create({
     //
   },
   carouselSlide: {
-    // width: windowWidth, // REMOVIDO DAQUI, PASSADO INLINE
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
   },
-  // NOVO ESTILO PARA AS IMAGENS DO SLIDE
   slideImage: {
-    width: '90%', // Ajusta a largura para caber no slide
-    height: 400, // Altura fixa, pode ajustar conforme necessário
-    borderRadius: 12, // Borda arredondada como nas suas imagens
+    width: '90%',
+    height: 400,
+    borderRadius: 12,
     marginBottom: 32,
   },
   slideTitle: {

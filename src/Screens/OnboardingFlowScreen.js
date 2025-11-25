@@ -1,4 +1,3 @@
-// src/Screens/OnboardingFlowScreen.js (VERSÃO FINAL - PAYWALL ATIVO NO FIM)
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -6,27 +5,23 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  ActivityIndicator,
   ScrollView,
-  Dimensions,
-  FlatList,
-  Animated,
   TextInput,
-  useWindowDimensions, // Import added
+  useWindowDimensions,
+  Platform,
+  FlatList
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useOnboarding } from '../context/OnboardingContext';
-import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line, G, Text as SvgText } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line } from 'react-native-svg';
 import {
-  Sparkles, Check, Lock, Briefcase, TrendingUp, Brain,
-  Layers, ArrowLeft, Target, BarChart3, UserCheck,
+  Sparkles, Check, Briefcase, TrendingUp, Brain,
+  Layers, ArrowLeft, BarChart3, UserCheck,
   BookOpen, MessageSquare, Shield, X, User
 } from 'lucide-react-native';
 
 import { supabase, useAuth } from '../context/AuthContext';
 import LoginAuth from '../context/LoginAuth';
-
-// ☆ IMPORTANTE: Importando o Modal Real de Paywall
 import PaywallModal from '../components/PaywallModal';
 
 // Cores
@@ -47,7 +42,7 @@ const cores = {
   neonOrange: "000000"
 };
 
-// --- COMPONENTES INTERNOS (MANTIDOS) ---
+// --- COMPONENTES INTERNOS ---
 
 const MarkdownRenderer = ({ text, style }) => {
   if (!text) return null;
@@ -184,8 +179,8 @@ const FeatureCard = ({ icon: Icon, title, subtitle, cardWidth }) => (
 
 const AutoCarousel = () => {
   const { width } = useWindowDimensions();
-  const screenWidth = Math.min(width, 1200); // Clamp to max width
-  const cardWidth = (screenWidth - 48) * 0.8; // Adjust calculation based on padding
+  const screenWidth = Math.min(width, 1200);
+  const cardWidth = (screenWidth - 48) * 0.8;
 
   const flatListRef = useRef(null);
   const scrollOffset = useRef(0);
@@ -228,8 +223,11 @@ export default function OnboardingFlowScreen() {
   const navigation = useNavigation();
   const { onboardingData, updateData } = useOnboarding();
   const { user, isPro } = useAuth();
+  const { width } = useWindowDimensions();
 
-  // Começa no passo 8 (Paywall) se já tiver usuário real
+  // Desktop check
+  const isDesktop = Platform.OS === 'web' && width > 768;
+
   const initialStep = (user && !user.is_anonymous) ? 8 : 1;
   const [step, setStep] = useState(initialStep);
 
@@ -260,15 +258,27 @@ export default function OnboardingFlowScreen() {
   );
 
   const renderStep = () => {
+    // Grid styles for desktop
+    const gridContainerStyle = isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'center' } : {};
+    const gridItemStyle = isDesktop ? { width: '48%', marginBottom: 0 } : { width: '100%' };
+
     switch (step) {
       case 1:
         return (
           <View style={styles.stepContainer}>
             <Text style={styles.title}>Para qual certificação você estuda?</Text>
             <Text style={styles.subtitle}>Isso nos ajuda a ajustar seu plano de estudos.</Text>
-            <MotivationButton icon={Briefcase} title="CPA" subtitle="Porta de entrada do mercado financeiro" selected={certification === 'cpa'} onPress={() => setCertification('cpa')} />
-            <MotivationButton icon={Briefcase} title="C-PRO R" subtitle="Especialista em relacionamentos" selected={certification === 'cpror'} onPress={() => setCertification('cpror')} />
-            <MotivationButton icon={Briefcase} title="C-PRO I" subtitle="Especialista em investimentos" selected={certification === 'cproi'} onPress={() => setCertification('cproi')} />
+            <View style={[{ width: '100%' }, gridContainerStyle]}>
+              <View style={gridItemStyle}>
+                <MotivationButton icon={Briefcase} title="CPA" subtitle="Porta de entrada do mercado financeiro" selected={certification === 'cpa'} onPress={() => setCertification('cpa')} />
+              </View>
+              <View style={gridItemStyle}>
+                <MotivationButton icon={Briefcase} title="C-PRO R" subtitle="Especialista em relacionamentos" selected={certification === 'cpror'} onPress={() => setCertification('cpror')} />
+              </View>
+              <View style={gridItemStyle}>
+                <MotivationButton icon={Briefcase} title="C-PRO I" subtitle="Especialista em investimentos" selected={certification === 'cproi'} onPress={() => setCertification('cproi')} />
+              </View>
+            </View>
           </View>
         );
       case 2:
@@ -276,9 +286,17 @@ export default function OnboardingFlowScreen() {
           <View style={styles.stepContainer}>
             <Text style={styles.title}>Por que você quer essa certificação?</Text>
             <Text style={styles.subtitle}>Isso nos ajuda a ajustar seu plano de estudos.</Text>
-            <MotivationButton icon={Briefcase} title="Entrar no mercado financeiro" selected={motivation === 'novato'} onPress={() => setMotivation('novato')} />
-            <MotivationButton icon={TrendingUp} title="Ser promovido(a)" selected={motivation === 'veterano'} onPress={() => setMotivation('veterano')} />
-            <MotivationButton icon={UserCheck} title="Aprender para crescer" selected={motivation === 'aprendiz'} onPress={() => setMotivation('aprendiz')} />
+            <View style={[{ width: '100%' }, gridContainerStyle]}>
+              <View style={gridItemStyle}>
+                <MotivationButton icon={Briefcase} title="Entrar no mercado financeiro" selected={motivation === 'novato'} onPress={() => setMotivation('novato')} />
+              </View>
+              <View style={gridItemStyle}>
+                <MotivationButton icon={TrendingUp} title="Ser promovido(a)" selected={motivation === 'veterano'} onPress={() => setMotivation('veterano')} />
+              </View>
+              <View style={gridItemStyle}>
+                <MotivationButton icon={UserCheck} title="Aprender para crescer" selected={motivation === 'aprendiz'} onPress={() => setMotivation('aprendiz')} />
+              </View>
+            </View>
           </View>
         );
       case 3:
@@ -291,24 +309,27 @@ export default function OnboardingFlowScreen() {
             <View style={styles.questionCard}>
               <Text style={styles.questionText}>{dummyQuestion.question}</Text>
             </View>
-            {Object.entries(dummyQuestion.options).map(([key, value]) => {
-              const isSelected = selectedAnswer === key;
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[styles.optionBtn, isSelected && !isVerified && styles.optionSelected, isVerified && key === dummyQuestion.answer && styles.optionCorrect, isVerified && isSelected && key !== dummyQuestion.answer && styles.optionIncorrect,]}
-                  disabled={isVerified} onPress={() => setSelectedAnswer(key)}
-                >
-                  <View style={styles.iconContainer}>
-                    {isVerified && key === dummyQuestion.answer && <Check color={cores.green500} />}
-                    {isVerified && isSelected && key !== dummyQuestion.answer && <X color={cores.red500} />}
-                    {!isVerified && <Text style={styles.optionKey}>{key}</Text>}
-                    {isVerified && !isSelected && key !== dummyQuestion.answer && <Text style={styles.optionKey}>{key}</Text>}
+            <View style={[{ width: '100%' }, gridContainerStyle]}>
+              {Object.entries(dummyQuestion.options).map(([key, value]) => {
+                const isSelected = selectedAnswer === key;
+                return (
+                  <View key={key} style={gridItemStyle}>
+                    <TouchableOpacity
+                      style={[styles.optionBtn, isSelected && !isVerified && styles.optionSelected, isVerified && key === dummyQuestion.answer && styles.optionCorrect, isVerified && isSelected && key !== dummyQuestion.answer && styles.optionIncorrect, { marginBottom: isDesktop ? 0 : 12 }]}
+                      disabled={isVerified} onPress={() => setSelectedAnswer(key)}
+                    >
+                      <View style={styles.iconContainer}>
+                        {isVerified && key === dummyQuestion.answer && <Check color={cores.green500} />}
+                        {isVerified && isSelected && key !== dummyQuestion.answer && <X color={cores.red500} />}
+                        {!isVerified && <Text style={styles.optionKey}>{key}</Text>}
+                        {isVerified && !isSelected && key !== dummyQuestion.answer && <Text style={styles.optionKey}>{key}</Text>}
+                      </View>
+                      <Text style={styles.optionValue}>{value}</Text>
+                    </TouchableOpacity>
                   </View>
-                  <Text style={styles.optionValue}>{value}</Text>
-                </TouchableOpacity>
-              );
-            })}
+                );
+              })}
+            </View>
             {isVerified && explanationData && (
               <ScrollView style={styles.explanationScroll}>
                 <View style={[styles.explanationBox, isCorrect ? styles.explanationBoxInfo : styles.explanationBoxError]}>
@@ -376,7 +397,6 @@ export default function OnboardingFlowScreen() {
           </View>
         );
 
-      // ☆ CASO 8: PAYWALL MODAL (CORREÇÃO SOLICITADA) ☆
       case 8:
         const handleCompleteOnboarding = async () => {
           try {
@@ -402,7 +422,6 @@ export default function OnboardingFlowScreen() {
                 : "Estamos preparando seu ambiente de estudos..."}
             </Text>
 
-            {/* Se for PRO, mostra botão de entrar direto */}
             {isPro && (
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: cores.primary }]}
@@ -413,10 +432,6 @@ export default function OnboardingFlowScreen() {
               </TouchableOpacity>
             )}
 
-            {/* ☆ AQUI ESTÁ A LÓGICA PEDIDA: ☆ */}
-            {/* Se NÃO é PRO, o Modal abre por cima AUTOMATICAMENTE. */}
-            {/* O modal tem seu próprio botão "X" (fechar). */}
-            {/* Quando fecha (onClose), chamamos handleCompleteOnboarding para ir pra Home (como Free). */}
             {!isPro && (
               <PaywallModal
                 visible={true}
@@ -485,10 +500,10 @@ export default function OnboardingFlowScreen() {
         );
 
       case 7:
-        return null; // O LoginAuth tem seus próprios botões
+        return null;
 
       case 8:
-        return null; // O Paywall (Modal) ou o botão PRO controlam o fluxo
+        return null;
 
       default:
         return null;
