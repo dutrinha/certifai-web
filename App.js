@@ -1,6 +1,6 @@
 // /App.jsx (VERSÃO ATUALIZADA - Onboarding Anônimo)
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, View, StyleSheet, StatusBar, Platform } from 'react-native';
 import { Home, FileText, BarChart3, MessageSquare } from 'lucide-react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
@@ -9,7 +9,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ContentProvider } from './src/context/ContentContext';
-import { OnboardingProvider } from './src/context/OnboardingContext'; // <-- 1. IMPORTADO
+import { OnboardingProvider } from './src/context/OnboardingContext';
 
 // Import Pages
 import HomePage from './src/pages/HomePage';
@@ -35,8 +35,7 @@ import ModuleLessonsPage from './src/pages/ModuleLessonPage';
 // Import Screens
 import LoginScreen from './src/Screens/LoginScreen';
 import SettingsScreen from './src/Screens/SettingsScreen';
-import OnboardingNavigator from './src/Screens/OnboardingNavigator'; // Este é o seu arquivo antigo, que vamos atualizar depois
-
+import OnboardingNavigator from './src/Screens/OnboardingNavigator';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -53,10 +52,7 @@ const lightColors = {
 function TrilhasNavigator() {
   return (
     <TrilhasStack.Navigator screenOptions={{ headerShown: false }}>
-      {/* A página raiz da aba */}
       <TrilhasStack.Screen name="TrilhasRoot" component={TrilhasPage} />
-
-      {/* As páginas "filhas" (Hubs) que a TrilhasPage pode chamar */}
       <TrilhasStack.Screen
         name="cpa-hub"
         component={CertificationHubPage}
@@ -75,7 +71,6 @@ function TrilhasNavigator() {
     </TrilhasStack.Navigator>
   );
 }
-
 
 function TabNavigator() {
   const colors = lightColors;
@@ -107,7 +102,6 @@ function TabNavigator() {
   );
 }
 
-// Este navegador será chamado *de dentro* do Onboarding
 function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
@@ -116,9 +110,6 @@ function AuthNavigator() {
   );
 }
 
-// =======================================================
-// ☆ INÍCIO DA MUDANÇA (LÓGICA DO ROOT) ☆
-// =======================================================
 function RootNavigator() {
   const { session, user, loading: authLoading } = useAuth();
   const colors = lightColors;
@@ -133,17 +124,12 @@ function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isLoggedIn ? (
-        // --- USUÁRIO LOGADO ---
         <>
           {hasCompletedOnboarding ? (
-            // 1. Logado E completou o onboarding -> Vai pro App
             <Stack.Screen name="Tabs" component={TabNavigator} />
           ) : (
-            // 2. Logado, MAS não completou -> Força o Onboarding
             <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
           )}
-
-          {/* Telas do App (Simulado, Settings, etc.) */}
           <Stack.Screen name="cpa10-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa10', certificationName: 'CPA-10' }} />
           <Stack.Screen name="cpa20-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa20', certificationName: 'CPA-20' }} />
           <Stack.Screen name="cea-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cea', certificationName: 'CEA' }} />
@@ -167,37 +153,37 @@ function RootNavigator() {
           <Stack.Screen name="ModuleLessonsPage" component={ModuleLessonsPage} />
         </>
       ) : (
-        // --- USUÁRIO ANÔNIMO ---
         <>
-          {/* 3. Anônimo -> Começa SEMPRE no Onboarding */}
           <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
-
-          {/* 4. Disponibiliza a tela de Auth para ser chamada */}
           <Stack.Screen name="Auth" component={AuthNavigator} />
         </>
       )}
     </Stack.Navigator>
   );
 }
-// =======================================================
-// ☆ FIM DA MUDANÇA (LÓGICA DO ROOT) ☆
-// =======================================================
-
 
 import { WebLayout } from './src/components/WebLayout';
 
-// ... (imports remain the same)
-
-// Componente App principal
 export default function App() {
   console.log('App: Rendering AuthProvider');
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      document.title = "CertifAI";
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <PaperProvider theme={MD3LightTheme}>
-        <NavigationContainer theme={DefaultTheme}>
+        <NavigationContainer
+          theme={DefaultTheme}
+          documentTitle={{
+            formatter: () => 'CertifAI',
+          }}
+        >
           <StatusBar barStyle="dark-content" backgroundColor={lightColors.background} />
           <ContentProvider>
-            {/* 2. ENVELOPADO COM O NOVO PROVIDER */}
             <OnboardingProvider>
               <WebLayout>
                 <RootNavigator />
@@ -210,7 +196,6 @@ export default function App() {
   );
 }
 
-// Estilos
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
