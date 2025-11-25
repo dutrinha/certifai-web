@@ -55,22 +55,22 @@ function TrilhasNavigator() {
     <TrilhasStack.Navigator screenOptions={{ headerShown: false }}>
       {/* A página raiz da aba */}
       <TrilhasStack.Screen name="TrilhasRoot" component={TrilhasPage} />
-      
+
       {/* As páginas "filhas" (Hubs) que a TrilhasPage pode chamar */}
-      <TrilhasStack.Screen 
-        name="cpa-hub" 
-        component={CertificationHubPage} 
-        initialParams={{ certificationType: 'cpa', certificationName: 'CPA' }} 
+      <TrilhasStack.Screen
+        name="cpa-hub"
+        component={CertificationHubPage}
+        initialParams={{ certificationType: 'cpa', certificationName: 'CPA' }}
       />
-      <TrilhasStack.Screen 
-        name="cpror-hub" 
-        component={CertificationHubPage} 
-        initialParams={{ certificationType: 'cpror', certificationName: 'C-PRO R' }} 
+      <TrilhasStack.Screen
+        name="cpror-hub"
+        component={CertificationHubPage}
+        initialParams={{ certificationType: 'cpror', certificationName: 'C-PRO R' }}
       />
-      <TrilhasStack.Screen 
-        name="cproi-hub" 
-        component={CertificationHubPage} 
-        initialParams={{ certificationType: 'cproi', certificationName: 'C-PRO I' }} 
+      <TrilhasStack.Screen
+        name="cproi-hub"
+        component={CertificationHubPage}
+        initialParams={{ certificationType: 'cproi', certificationName: 'C-PRO I' }}
       />
     </TrilhasStack.Navigator>
   );
@@ -124,7 +124,7 @@ function RootNavigator() {
   const colors = lightColors;
 
   if (authLoading) {
-    return ( <View style={[ styles.loadingContainer, { backgroundColor: colors.background } ]}><ActivityIndicator size="large" color={colors.primary} /></View> );
+    return (<View style={[styles.loadingContainer, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>);
   }
 
   const isLoggedIn = session && user;
@@ -142,7 +142,7 @@ function RootNavigator() {
             // 2. Logado, MAS não completou -> Força o Onboarding
             <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
           )}
-          
+
           {/* Telas do App (Simulado, Settings, etc.) */}
           <Stack.Screen name="cpa10-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa10', certificationName: 'CPA-10' }} />
           <Stack.Screen name="cpa20-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa20', certificationName: 'CPA-20' }} />
@@ -171,7 +171,7 @@ function RootNavigator() {
         <>
           {/* 3. Anônimo -> Começa SEMPRE no Onboarding */}
           <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
-          
+
           {/* 4. Disponibiliza a tela de Auth para ser chamada */}
           <Stack.Screen name="Auth" component={AuthNavigator} />
         </>
@@ -184,6 +184,10 @@ function RootNavigator() {
 // =======================================================
 
 
+import { WebLayout } from './src/components/WebLayout';
+
+// ... (imports remain the same)
+
 // Componente App principal
 export default function App() {
   console.log('App: Rendering AuthProvider');
@@ -195,7 +199,9 @@ export default function App() {
           <ContentProvider>
             {/* 2. ENVELOPADO COM O NOVO PROVIDER */}
             <OnboardingProvider>
-              <RootNavigator />
+              <WebLayout>
+                <RootNavigator />
+              </WebLayout>
             </OnboardingProvider>
           </ContentProvider>
         </NavigationContainer>
