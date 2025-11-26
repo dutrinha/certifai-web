@@ -112,11 +112,13 @@ export default function LoginAuth({ onLoginSuccess }) {
     try {
       // Use window.location.origin for web to ensure it uses the current domain
       // We remove /auth/callback to match the root domain which is likely whitelisted
-      const redirectUrl = Platform.OS === 'web'
-        ? window.location.origin
-        : makeRedirectUri({
-          path: '/auth/callback',
-        });
+      let redirectUrl = makeRedirectUri({
+        path: '/auth/callback',
+      });
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        redirectUrl = window.location.origin;
+      }
 
       console.log("Redirecting to:", redirectUrl);
 
