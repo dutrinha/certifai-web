@@ -38,15 +38,22 @@ export const getSmartHomeData = async (user) => {
       currentStreak = meta.study_streak.count;
     }
 
-    // 3. Busca o progresso real dos módulos da certificação principal
-    // (AQUI ESTAVA CORRETO, pois 'user.id' era passado)
-    const moduleProgress = await fetchCertificationProgress(user.id, certificationFocus);
-    
-    // 4. Converte o progresso em um "mapa" para a UI (ex: { 1: 5, 2: 1 })
-    const progressMap = moduleProgress.reduce((acc, item) => {
-      acc[item.module_id] = item.current_lesson_index;
-      return acc;
-    }, {});
+    // 3. Busca o progresso real de TODAS as certificações (Pre-load)
+    const allProgress = await fetchAllCertificationsProgress(user.id);
+
+    // 4. Converte o progresso em um objeto aninhado: { cpa: {1: 5}, cpror: {1: 2} }
+    const allProgressMaps = {
+      cpa: {},
+      cpror: {},
+      cproi: {}
+    };
+
+    allProgress.forEach(item => {
+      if (!allProgressMaps[item.certification]) {
+        allProgressMaps[item.certification] = {};
+      }
+      allProgressMaps[item.certification][item.module_id] = item.current_lesson_index;
+    });
 
     // 5. Retorna um objeto único com tudo que a Home precisa
     return {
@@ -54,7 +61,7 @@ export const getSmartHomeData = async (user) => {
       goal: dailyGoal,
       streak: currentStreak,
       certification: certificationFocus,
-      progressMap: progressMap, 
+      allProgressMaps: allProgressMaps, // Agora retornamos todos os mapas
     };
 
   } catch (error) {
@@ -64,17 +71,40 @@ export const getSmartHomeData = async (user) => {
 };
 
 /**
+ * Busca o progresso de TODOS os módulos de TODAS as certificações do usuário
+ */
+export const fetchAllCertificationsProgress = async (userId) => {
+  try {
+    if (!userId) {
+      console.warn("fetchAllCertificationsProgress chamado sem userId.");
+      return [];
+    }
+
+    // Removemos o filtro .eq('certification', certificationType) para pegar tudo
+    const { data, error } = await supabase
+      .from('user_module_progress')
+      .select('certification, module_id, current_lesson_index')
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Erro ao buscar progresso:", error);
+    return [];
+  }
+};
+
+/**
  * Busca o progresso de todos os módulos de uma certificação
- * ATUALIZADO: Adicionada verificação de userId
+ * Mantido para compatibilidade, mas agora pode ser redundante se usarmos o fetchAll
  */
 export const fetchCertificationProgress = async (userId, certificationType) => {
   try {
-    // CORREÇÃO: Se o userId não for passado, não tenta buscar
     if (!userId) {
       console.warn("fetchCertificationProgress chamado sem userId.");
       return [];
     }
-    
+
     const { data, error } = await supabase
       .from('user_module_progress')
       .select('module_id, current_lesson_index')
@@ -127,7 +157,7 @@ export const markLessonAsCompleted = async (certificationType, moduleId, lessonI
       console.log(`Progresso atualizado: Módulo ${moduleId} -> Próxima aula é ${newIndex}`);
       return newIndex;
     }
-    
+
     // Se a aula completada for uma antiga (ex: index 0) e o progresso já estiver no 3, não faz nada
     console.log(`Aula ${lessonIndex} refeita, progresso atual (${currentIndex}) mantido.`);
     return currentIndex;
@@ -143,7 +173,7 @@ export const markLessonAsCompleted = async (certificationType, moduleId, lessonI
 export const updateUserCertificationFocus = async (newCertification) => {
   try {
     const { error } = await supabase.auth.updateUser({
-      data: { certification_focus: newCertification } 
+      data: { certification_focus: newCertification }
     });
     if (error) throw error;
     console.log("Foco de certificação atualizado para:", newCertification);

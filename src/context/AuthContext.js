@@ -12,7 +12,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
   },
 });
 
@@ -22,7 +22,7 @@ const AuthContext = createContext({
   subscription: null,
   isPro: false,
   loading: true,
-  refreshSubscription: async () => {},
+  refreshSubscription: async () => { },
 });
 
 export const AuthProvider = ({ children }) => {
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
         .eq('user_id', userId)
         .single();
 
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout busca assinatura')), 3000)
       );
 
@@ -52,8 +52,8 @@ export const AuthProvider = ({ children }) => {
       } else if (data) {
         // Só atualiza se o status mudou para evitar re-renders desnecessários
         setSubscription(prev => {
-            if (prev?.status === data.status) return prev;
-            return data;
+          if (prev?.status === data.status) return prev;
+          return data;
         });
         console.log(`[AuthContext] Assinatura carregada: ${data.status}`);
       }
@@ -69,14 +69,14 @@ export const AuthProvider = ({ children }) => {
       try {
         setLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
-          setLoading(false); 
+          setLoading(false);
 
           if (session?.user) {
-            fetchSubscription(session.user.id); 
+            fetchSubscription(session.user.id);
           }
         }
       } catch (err) {
@@ -88,20 +88,20 @@ export const AuthProvider = ({ children }) => {
     loadSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Ignora atualizações de usuário (XP, nome) para não gerar loop de busca
-      if (event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') return;
-      
+      // Ignora apenas TOKEN_REFRESHED se necessário, mas permite USER_UPDATED para refletir mudanças de perfil
+      if (event === 'TOKEN_REFRESHED') return;
+
       console.log(`[AuthContext] Evento Auth Relevante: ${event}`);
-      
+
       if (mounted) {
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false); 
+        setLoading(false);
 
         if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-           fetchSubscription(session.user.id);
+          fetchSubscription(session.user.id);
         } else if (event === 'SIGNED_OUT') {
-           setSubscription(null);
+          setSubscription(null);
         }
       }
     });
@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }) => {
   // useCallback garante que essa função não mude de identidade a cada render
   const refreshSubscription = useCallback(async () => {
     if (user) {
-        await fetchSubscription(user.id);
+      await fetchSubscription(user.id);
     }
   }, [user, fetchSubscription]);
 

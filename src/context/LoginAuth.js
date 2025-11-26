@@ -6,12 +6,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
+  Platform,
+  Image,
 } from 'react-native';
-import { supabase } from '../context/AuthContext'; 
+import { supabase } from '../context/AuthContext';
 import { Mail, Hash } from 'lucide-react-native';
-
+import { makeRedirectUri } from 'expo-auth-session';
 const cores = {
   primary: '#00C853',
   light: '#FFFFFF',
@@ -24,15 +25,14 @@ const cores = {
 
 export default function LoginAuth({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
-  const [token, setToken] = useState(''); 
+  const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [step, setStep] = useState('email');
-  
+
   const [isResendDisabled, setIsResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(60);
 
-  // (Todo o useEffect de cooldown é copiado 100% do LoginScreen)
   useEffect(() => {
     let timerId;
     if (isResendDisabled) {
@@ -52,9 +52,8 @@ export default function LoginAuth({ onLoginSuccess }) {
         clearInterval(timerId);
       }
     };
-  }, [isResendDisabled]); //
+  }, [isResendDisabled]);
 
-  // (Função handleSendCode copiada 100% do LoginScreen)
   const handleSendCode = async (isResending = false) => {
     setLoading(true);
     setErrorMessage('');
@@ -62,25 +61,24 @@ export default function LoginAuth({ onLoginSuccess }) {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          shouldCreateUser: true, 
+          shouldCreateUser: true,
         },
-      }); //
+      });
       if (error) {
         throw error;
       }
       if (!isResending) {
-        setStep('token'); 
+        setStep('token');
       }
-      setIsResendDisabled(true); 
+      setIsResendDisabled(true);
     } catch (e) {
       console.error("Erro ao enviar código:", e);
       setErrorMessage('Erro ao enviar o código. Verifique o e-mail e tente novamente.');
     } finally {
       setLoading(false);
     }
-  }; //
+  };
 
-  // (Função handleVerifyCode copiada, com UMA adição)
   const handleVerifyCode = async () => {
     setLoading(true);
     setErrorMessage('');
@@ -89,13 +87,13 @@ export default function LoginAuth({ onLoginSuccess }) {
         email: email.trim(),
         token: token.trim(),
         type: 'email',
-      }); //
+      });
 
       if (error) {
         throw error;
       }
-      
-      console.log("Sessão verificada:", data.session); //
+
+      console.log("Sessão verificada:", data.session);
 
       if (onLoginSuccess) {
         onLoginSuccess();
@@ -106,10 +104,38 @@ export default function LoginAuth({ onLoginSuccess }) {
     } finally {
       setLoading(false);
     }
-  }; //
+  };
 
-  const handleEmailChange = (text) => { setEmail(text); if (errorMessage) setErrorMessage(''); }; //
-  const handleTokenChange = (text) => { setToken(text); if (errorMessage) setErrorMessage(''); }; //
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const redirectUrl = makeRedirectUri({
+        path: '/auth/callback',
+      });
+      console.log("Redirecting to:", redirectUrl);
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          scopes: ['email', 'profile'],
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (e) {
+      console.error("Erro ao fazer login com Google:", e);
+      setErrorMessage('Erro ao fazer login com Google. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailChange = (text) => { setEmail(text); if (errorMessage) setErrorMessage(''); };
+  const handleTokenChange = (text) => { setToken(text); if (errorMessage) setErrorMessage(''); };
 
   return (
     <>
@@ -141,6 +167,27 @@ export default function LoginAuth({ onLoginSuccess }) {
               <Text style={styles.buttonText}>Enviar código</Text>
             )}
           </TouchableOpacity>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Ou</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, styles.googleButton, loading && styles.buttonDisabled]}
+            onPress={handleGoogleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={cores.secondary} />
+            ) : (
+              <>
+                <Image source={require('../../assets/google.png')} style={{ width: 24, height: 24, marginRight: 10 }} resizeMode="contain" />
+                <Text style={styles.googleButtonText}>Continuar com Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </>
       )}
 
@@ -148,7 +195,7 @@ export default function LoginAuth({ onLoginSuccess }) {
         <>
           <Text style={styles.title}>Verifique seu E-mail</Text>
           <Text style={styles.subtitle}>
-            Enviamos um código para <Text style={{fontWeight: 'bold'}}>{email}</Text>
+            Enviamos um código para <Text style={{ fontWeight: 'bold' }}>{email}</Text>
           </Text>
           <View style={[styles.inputContainer, errorMessage ? styles.inputErrorBorder : null]}>
             <Hash size={20} color={errorMessage ? cores.red500 : cores.gray500} style={styles.inputIcon} />
@@ -173,27 +220,27 @@ export default function LoginAuth({ onLoginSuccess }) {
               <Text style={styles.buttonText}>Confirmar e Entrar</Text>
             )}
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.footerLinkContainer}
             onPress={() => handleSendCode(true)}
-            disabled={isResendDisabled || loading} 
+            disabled={isResendDisabled || loading}
           >
             <Text style={[
-              styles.footerLinkText, 
+              styles.footerLinkText,
               (isResendDisabled || loading) && styles.disabledText
             ]}>
-              {isResendDisabled 
-                ? `Reenviar código em (${countdown}s)` 
+              {isResendDisabled
+                ? `Reenviar código em (${countdown}s)`
                 : 'Reenviar código'
               }
             </Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-             style={styles.footerLinkContainer}
-             onPress={() => { setStep('email'); setErrorMessage(''); }} 
-             disabled={loading}
+
+          <TouchableOpacity
+            style={styles.footerLinkContainer}
+            onPress={() => { setStep('email'); setErrorMessage(''); }}
+            disabled={loading}
           >
           </TouchableOpacity>
         </>
@@ -203,53 +250,74 @@ export default function LoginAuth({ onLoginSuccess }) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: 'bold', color: cores.secondary, textAlign: 'center', marginBottom: 8 }, //
-  subtitle: { fontSize: 16, color: cores.gray500, textAlign: 'center', marginBottom: 32 }, //
+  title: { fontSize: 28, fontWeight: 'bold', color: cores.secondary, textAlign: 'center', marginBottom: 8 },
+  subtitle: { fontSize: 16, color: cores.gray500, textAlign: 'center', marginBottom: 32 },
   inputContainer: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: cores.gray100,
     borderRadius: 12, marginBottom: 16, paddingHorizontal: 12, borderWidth: 1,
     borderColor: cores.gray100,
-  }, //
-  inputErrorBorder: { borderColor: cores.red500, }, //
-  inputIcon: { marginRight: 8 }, //
-  input: { flex: 1, height: 50, fontSize: 16, color: cores.secondary }, //
+  },
+  inputErrorBorder: { borderColor: cores.red500, },
+  inputIcon: { marginRight: 8 },
+  input: { flex: 1, height: 50, fontSize: 16, color: cores.secondary },
   errorText: {
     color: cores.red500,
     textAlign: 'center',
     marginBottom: 12,
     fontSize: 14,
     fontWeight: '500',
-  }, //
-  
-  // ☆ MUDANÇA ☆: Adicionei width: '100%' aqui
+  },
   button: {
     paddingVertical: 14, borderRadius: 12, alignItems: 'center',
     justifyContent: 'center', flexDirection: 'row',
-    width: '100%', // <-- ADICIONADO
-  }, //
-  
-  // ☆ MUDANÇA ☆: Adicionei width: '100%' aqui
-  loginButton: { 
-    backgroundColor: cores.primary, 
+    width: '100%',
+  },
+  loginButton: {
+    backgroundColor: cores.primary,
     marginTop: 4,
-    width: '100%', // <-- ADICIONADO
-  }, //
-  
-  buttonDisabled: { opacity: 0.5, }, //
-  buttonText: { color: cores.light, fontSize: 16, fontWeight: 'bold' }, //
-  
-  // (Estilos dos links que corrigimos no passo anterior)
+    width: '100%',
+  },
+  buttonDisabled: { opacity: 0.5, },
+  buttonText: { color: cores.light, fontSize: 16, fontWeight: 'bold' },
   footerLinkContainer: {
     marginTop: 16,
     alignItems: 'center',
   },
   footerLinkText: {
-    color: cores.gray500, 
-    fontSize: 16, 
+    color: cores.gray500,
+    fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center'
   },
   disabledText: {
     color: cores.gray300,
-  }, //
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+    width: '100%',
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: cores.gray300,
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    color: cores.gray500,
+    fontWeight: 'bold',
+  },
+  googleButton: {
+    backgroundColor: cores.light,
+    borderWidth: 1,
+    borderColor: cores.gray300,
+    width: '100%',
+    marginBottom: 16,
+  },
+  googleButtonText: {
+    color: cores.secondary,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
