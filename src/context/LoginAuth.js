@@ -110,9 +110,13 @@ export default function LoginAuth({ onLoginSuccess }) {
     setLoading(true);
     setErrorMessage('');
     try {
-      const redirectUrl = makeRedirectUri({
-        path: '/auth/callback',
-      });
+      // Use window.location.origin for web to ensure it uses the current domain
+      const redirectUrl = Platform.OS === 'web'
+        ? `${window.location.origin}/auth/callback`
+        : makeRedirectUri({
+          path: '/auth/callback',
+        });
+
       console.log("Redirecting to:", redirectUrl);
 
       const { error } = await supabase.auth.signInWithOAuth({
