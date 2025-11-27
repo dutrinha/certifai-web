@@ -322,6 +322,7 @@ const styles = StyleSheet.create({
   },
   inputIcon: { marginRight: 16 },
   input: { 
+    outlineStyle: 'none',
     flex: 1, 
     height: 48,
     fontSize: 16, 
