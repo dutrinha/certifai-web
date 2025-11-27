@@ -1,4 +1,4 @@
-// src/screens/LoginScreen.jsx (Versão Refatorada FINAL)
+// src/Screens/LoginScreen.js
 import React from 'react';
 import {
   StyleSheet,
@@ -7,7 +7,8 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Text,
-  TouchableOpacity
+  TouchableOpacity,
+  View
 } from 'react-native';
 import LoginAuth from '../context/LoginAuth'; 
 
@@ -19,7 +20,10 @@ const cores = {
   gray300: '#CBD5E1',
   gray500: '#64748B',
   red500: '#EF4444',
-}; //
+};
+
+// Largura máxima para manter consistência com o Onboarding no Desktop
+const CONTENT_MAX_WIDTH = 500;
 
 export default function LoginScreen({ navigation }) {
   return (
@@ -28,35 +32,50 @@ export default function LoginScreen({ navigation }) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          
-          <LoginAuth />
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Container Responsivo que limita a largura */}
+          <View style={styles.responsiveContainer}>
+            
+            <LoginAuth />
 
-          {/* ☆ MUDANÇA ☆: Adicionamos o botão "Voltar" aqui */}
-          <TouchableOpacity 
-            style={styles.footerLinkContainer}
-            onPress={() => navigation.goBack()} // <-- Ação de voltar
-          >
-            <Text style={styles.footerLinkText}>Voltar para o Início</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.footerLinkContainer}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.footerLinkText}>Voltar para o Início</Text>
+            </TouchableOpacity>
 
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// ☆ MUDANÇA ☆: Adicionamos os estilos de link copiados do LoginAuth.js
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: cores.light }, //
-  container: { flex: 1 }, //
+  safeArea: { 
+    flex: 1, 
+    backgroundColor: cores.light 
+  },
+  container: { 
+    flex: 1 
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 30,
-  }, //
-  // Estilos para os links (igual ao LoginAuth.js e WelcomeScreen.js)
+    alignItems: 'center', // Centraliza o bloco na tela (Desktop)
+    paddingVertical: 30,
+  },
+  responsiveContainer: {
+    width: '100%',
+    maxWidth: CONTENT_MAX_WIDTH, // Limita largura máxima
+    paddingHorizontal: 24,       // Espaçamento lateral interno
+    alignSelf: 'center',         // Garante centralização
+    justifyContent: 'center',
+  },
   footerLinkContainer: {
     marginTop: 16,
     alignItems: 'center',
