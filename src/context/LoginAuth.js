@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   inputErrorBorder: { borderColor: cores.red500, },
   inputIcon: { marginRight: 8 },
-  input: { flex: 1, height: 50, fontSize: 16, color: cores.secondary },
+  input: { flex: 1, height: 50, fontSize: 16, outlineStyle: 'none', color: cores.secondary },
   errorText: {
     color: cores.red500,
     textAlign: 'center',
