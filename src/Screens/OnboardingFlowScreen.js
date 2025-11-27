@@ -1,3 +1,4 @@
+// src/Screens/OnboardingFlowScreen.js (VERSÃO FINAL - CARROSSEL AUTOMÁTICO CORRIGIDO WEB/IOS/ANDROID)
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -5,23 +6,29 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
   ScrollView,
+  Dimensions,
+  FlatList,
+  Animated,
   TextInput,
-  useWindowDimensions,
   Platform,
-  FlatList
+  useWindowDimensions,
+  Easing, // Adicionado Easing para animação linear
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useOnboarding } from '../context/OnboardingContext';
-import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line } from 'react-native-svg';
-import {
-  Sparkles, Check, Briefcase, TrendingUp, Brain,
-  Layers, ArrowLeft, BarChart3, UserCheck,
+import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line, G, Text as SvgText } from 'react-native-svg';
+import { 
+  Sparkles, Check, Lock, Briefcase, TrendingUp, Brain, 
+  Layers, ArrowLeft, Target, BarChart3, UserCheck, 
   BookOpen, MessageSquare, Shield, X, User
 } from 'lucide-react-native';
 
-import { supabase, useAuth } from '../context/AuthContext';
+import { supabase, useAuth } from '../context/AuthContext'; 
 import LoginAuth from '../context/LoginAuth';
+
+// ☆ IMPORTANTE: Importando o Modal Real de Paywall
 import PaywallModal from '../components/PaywallModal';
 
 // Cores
@@ -41,6 +48,8 @@ const cores = {
   primaryLight: '#E6F8EB',
   neonOrange: "000000"
 };
+
+const CONTENT_MAX_WIDTH = 500; // Largura máxima para inputs/botões no PC
 
 // --- COMPONENTES INTERNOS ---
 
@@ -88,56 +97,63 @@ const MotivationButton = ({ icon: Icon, title, subtitle, selected, onPress }) =>
 );
 
 const ProductivityGraphCard = () => {
-  const width = 300;
+  const { width: windowWidth } = useWindowDimensions();
+  const width = Math.min(300, windowWidth - 60); 
   const height = 220;
+  
   const start = { x: 30, y: 180 };
-  const mid = { x: 160, y: 100 };
-  const endGood = { x: 280, y: 40 };
-  const endBad = { x: 240, y: 150 };
+  const mid = { x: width * 0.53, y: 100 }; 
+  const endGood = { x: width * 0.93, y: 40 }; 
+  const endBad = { x: width * 0.8, y: 150 };
 
   return (
     <View style={styles.lightGraphContainer}>
       <View style={styles.graphCardLight}>
         <Text style={styles.graphTitleLight}>Aumento de produtividade</Text>
         <View style={{ alignItems: 'center', marginTop: 10 }}>
-          <Svg height={height} width="100%" viewBox={`0 0 ${width} ${height}`}>
-            <Defs>
-              <LinearGradient id="gradPrimary" x1="0" y1="1" x2="0" y2="0">
-                <Stop offset="0" stopColor={cores.primary} stopOpacity="0.1" />
-                <Stop offset="1" stopColor={cores.primary} stopOpacity="0.4" />
-              </LinearGradient>
-            </Defs>
-            {[1, 2, 3, 4].map(i => (
-              <Line key={`v-${i}`} x1={i * 60} y1="20" x2={i * 60} y2="200" stroke={cores.gray200} strokeWidth="1" strokeDasharray="4 4" />
-            ))}
-            {[1, 2, 3].map(i => (
-              <Line key={`h-${i}`} x1="20" y1={i * 50} x2="280" y2={i * 50} stroke={cores.gray200} strokeWidth="1" strokeDasharray="4 4" />
-            ))}
-            <Path
-              d={`M ${start.x} ${start.y} Q 120 170 ${endBad.x} ${endBad.y}`}
-              stroke={cores.red500} strokeWidth="2" fill="none" opacity="0.8"
-            />
-            <Path
-              d={`M ${start.x} ${start.y} Q 100 140 ${mid.x} ${mid.y} T ${endGood.x} ${endGood.y}`}
-              stroke={cores.primary} strokeWidth="6" strokeOpacity="0.2" fill="none"
-            />
-            <Path
-              d={`M ${start.x} ${start.y} Q 100 140 ${mid.x} ${mid.y} T ${endGood.x} ${endGood.y}`}
-              stroke={cores.primary} strokeWidth="3" fill="none"
-            />
-            <Circle cx={start.x} cy={start.y} r="6" fill={cores.light} stroke={cores.secondary} strokeWidth="2" />
-            <Circle cx={mid.x} cy={mid.y} r="5" fill={cores.light} stroke={cores.primary} strokeWidth="3" />
-            <Circle cx={endGood.x} cy={endGood.y} r="5" fill={cores.light} stroke={cores.primary} strokeWidth="3" />
-          </Svg>
-          <View style={[styles.labelTagLight, { left: 0, bottom: 40 }]}>
-            <Text style={styles.labelTextLight}>Início</Text>
+          
+          <View style={{ width: width, height: height, position: 'relative' }}>
+            <Svg height={height} width={width} viewBox={`0 0 ${width} ${height}`} style={{ position: 'absolute', top: 0, left: 0 }}>
+              <Defs>
+                <LinearGradient id="gradPrimary" x1="0" y1="1" x2="0" y2="0">
+                  <Stop offset="0" stopColor={cores.primary} stopOpacity="0.1" />
+                  <Stop offset="1" stopColor={cores.primary} stopOpacity="0.4" />
+                </LinearGradient>
+              </Defs>
+              {[1, 2, 3, 4].map(i => (
+                <Line key={`v-${i}`} x1={i * (width/5)} y1="20" x2={i * (width/5)} y2="200" stroke={cores.gray200} strokeWidth="1" strokeDasharray="4 4" />
+              ))}
+              {[1, 2, 3].map(i => (
+                <Line key={`h-${i}`} x1="20" y1={i * 50} x2={width - 20} y2={i * 50} stroke={cores.gray200} strokeWidth="1" strokeDasharray="4 4" />
+              ))}
+              <Path
+                d={`M ${start.x} ${start.y} Q ${width * 0.4} 170 ${endBad.x} ${endBad.y}`}
+                stroke={cores.red500} strokeWidth="2" fill="none" opacity="0.8"
+              />
+              <Path
+                d={`M ${start.x} ${start.y} Q ${width * 0.33} 140 ${mid.x} ${mid.y} T ${endGood.x} ${endGood.y}`}
+                stroke={cores.primary} strokeWidth="6" strokeOpacity="0.2" fill="none"
+              />
+              <Path
+                d={`M ${start.x} ${start.y} Q ${width * 0.33} 140 ${mid.x} ${mid.y} T ${endGood.x} ${endGood.y}`}
+                stroke={cores.primary} strokeWidth="3" fill="none"
+              />
+              <Circle cx={start.x} cy={start.y} r="6" fill={cores.light} stroke={cores.secondary} strokeWidth="2" />
+              <Circle cx={mid.x} cy={mid.y} r="5" fill={cores.light} stroke={cores.primary} strokeWidth="3" />
+              <Circle cx={endGood.x} cy={endGood.y} r="5" fill={cores.light} stroke={cores.primary} strokeWidth="3" />
+            </Svg>
+            
+            <View style={[styles.labelTagLight, { left: start.x - 28, top: start.y + 15 }]}>
+              <Text style={styles.labelTextLight}>Início</Text>
+            </View>
+            <View style={[styles.labelTagLight, { left: mid.x - 45, top: mid.y - 35 }]}>
+              <Text style={styles.labelTextLight}>em 10 dias</Text>
+            </View>
+            <View style={[styles.labelTagLight, { left: endGood.x - 25, top: endGood.y - 35 }]}>
+              <Text style={styles.labelTextLight}>Meta</Text>
+            </View>
           </View>
-          <View style={[styles.labelTagLight, { left: 100, top: 70 }]}>
-            <Text style={styles.labelTextLight}>em 10 dias</Text>
-          </View>
-          <View style={[styles.labelTagLight, { right: 0, top: 10 }]}>
-            <Text style={styles.labelTextLight}>Meta</Text>
-          </View>
+
         </View>
         <View style={styles.legendContainer}>
           <View style={styles.legendItem}>
@@ -154,7 +170,6 @@ const ProductivityGraphCard = () => {
   );
 };
 
-const CARD_MARGIN = 16;
 const features = [
   { icon: Brain, title: "Cases Dissertativos", subtitle: "Corrija seu raciocínio em cenários reais." },
   { icon: BookOpen, title: "Questões Interativas", subtitle: "Aprenda com desafios dinâmicos." },
@@ -163,10 +178,10 @@ const features = [
   { icon: Shield, title: "Todas Certificações", subtitle: "Uma assinatura, acesso total à sua carreira." },
   { icon: MessageSquare, title: "Ajuda Personalizada", subtitle: "Tire dúvidas 24/7 com o Professor IA." },
 ];
-const duplicatedFeatures = [...features, ...features];
+const duplicatedFeatures = [...features, ...features]; 
 
-const FeatureCard = ({ icon: Icon, title, subtitle, cardWidth }) => (
-  <View style={[styles.featureCard, { width: cardWidth }]}>
+const FeatureCard = ({ icon: Icon, title, subtitle, width }) => (
+  <View style={[styles.featureCard, { width: width }]}>
     <View style={styles.featureIconContainer}>
       <Icon size={26} color={cores.primary} />
     </View>
@@ -177,60 +192,92 @@ const FeatureCard = ({ icon: Icon, title, subtitle, cardWidth }) => (
   </View>
 );
 
+// --- AUTO CAROUSEL CORRIGIDO (VERSÃO FINAL ROBUSTA) ---
+// Substituímos FlatList por Animated.View com Transform. 
+// Isso funciona 100% na Web pois usa CSS Transform em vez de Scroll Engine.
 const AutoCarousel = () => {
-  const { width } = useWindowDimensions();
-  const screenWidth = Math.min(width, 1200);
-  const cardWidth = (screenWidth - 48) * 0.8;
-
-  const flatListRef = useRef(null);
-  const scrollOffset = useRef(0);
-  const singleListWidth = (cardWidth + CARD_MARGIN) * features.length;
+  const { width: windowWidth } = useWindowDimensions();
+  // Usamos Animated.Value para controlar a posição X
+  const scrollX = useRef(new Animated.Value(0)).current; 
+  
+  // Cálculo de larguras
+  const isDesktop = windowWidth > 768;
+  const CARD_MARGIN = 16;
+  const cardWidth = isDesktop ? 280 : (windowWidth - 80) * 0.85;
+  const itemFullWidth = cardWidth + CARD_MARGIN;
+  
+  // Largura total de UM conjunto (o ponto de reset da animação)
+  const singleSetWidth = itemFullWidth * features.length;
 
   useEffect(() => {
-    const scroll = () => {
-      scrollOffset.current += 1;
-      if (scrollOffset.current >= singleListWidth) {
-        scrollOffset.current = 0;
-        flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-      } else {
-        flatListRef.current?.scrollToOffset({ offset: scrollOffset.current, animated: false });
-      }
+    // Função que inicia o loop infinito
+    const startLoop = () => {
+      // Reseta para 0
+      scrollX.setValue(0);
+      
+      // Cria a animação de 0 até -singleSetWidth
+      Animated.loop(
+        Animated.timing(scrollX, {
+          toValue: -singleSetWidth,
+          duration: 30000, // 30 segundos para uma volta completa (ajuste a velocidade aqui)
+          easing: Easing.linear, // Movimento constante, sem aceleração
+          useNativeDriver: true, // Garante performance nativa e na Web
+        })
+      ).start();
     };
-    const timer = setInterval(scroll, 16);
-    return () => clearInterval(timer);
-  }, [singleListWidth]);
+
+    startLoop();
+
+    // Cleanup se desmontar (opcional, mas boa prática)
+    return () => {
+      scrollX.stopAnimation();
+    };
+  }, [singleSetWidth, scrollX]);
 
   return (
-    <View style={[styles.carouselWrapper, { width: screenWidth + 48, marginLeft: -24 }]}>
-      <FlatList
-        ref={flatListRef}
-        data={duplicatedFeatures}
-        renderItem={({ item }) => <FeatureCard icon={item.icon} title={item.title} subtitle={item.subtitle} cardWidth={cardWidth} />}
-        keyExtractor={(item, index) => `${item.title}-${index}`}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        scrollEnabled={false}
-        contentContainerStyle={{ paddingHorizontal: (screenWidth - cardWidth) / 2, gap: CARD_MARGIN }}
-      />
+    <View style={styles.carouselWrapper}>
+      {/* Container com overflow hidden para mascarar os itens saindo da tela */}
+      <View style={{ width: '100%', overflow: 'hidden' }}>
+        
+        {/* A View que efetivamente se move */}
+        <Animated.View
+          style={{
+            flexDirection: 'row',
+            width: singleSetWidth * 2, // Garante que cabe tudo numa linha
+            transform: [{ translateX: scrollX }], // O motor da animação
+            paddingLeft: 16, // Espaço inicial visual
+          }}
+        >
+          {duplicatedFeatures.map((item, index) => (
+            // Adicionamos uma View wrapper para garantir o espaçamento (gap/margin)
+            <View key={`${item.title}-${index}`} style={{ marginRight: CARD_MARGIN }}>
+              <FeatureCard 
+                icon={item.icon} 
+                title={item.title} 
+                subtitle={item.subtitle} 
+                width={cardWidth} 
+              />
+            </View>
+          ))}
+        </Animated.View>
+
+      </View>
     </View>
   );
 };
 
 // =======================================================
-// ☆ COMPONENTE PRINCIPAL ☆
+// ☆ TELA PRINCIPAL (ONBOARDING) ☆
 // =======================================================
 export default function OnboardingFlowScreen() {
   const navigation = useNavigation();
   const { onboardingData, updateData } = useOnboarding();
-  const { user, isPro } = useAuth();
-  const { width } = useWindowDimensions();
+  const { user, isPro } = useAuth(); 
 
-  // Desktop check
-  const isDesktop = Platform.OS === 'web' && width > 768;
-
+  // Começa no passo 8 (Paywall) se já tiver usuário real
   const initialStep = (user && !user.is_anonymous) ? 8 : 1;
   const [step, setStep] = useState(initialStep);
-
+  
   const [motivation, setMotivation] = useState(null);
   const [certification, setCertification] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -258,27 +305,15 @@ export default function OnboardingFlowScreen() {
   );
 
   const renderStep = () => {
-    // Grid styles for desktop
-    const gridContainerStyle = isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'center' } : {};
-    const gridItemStyle = isDesktop ? { width: '48%', marginBottom: 0 } : { width: '100%' };
-
     switch (step) {
       case 1:
         return (
           <View style={styles.stepContainer}>
             <Text style={styles.title}>Para qual certificação você estuda?</Text>
             <Text style={styles.subtitle}>Isso nos ajuda a ajustar seu plano de estudos.</Text>
-            <View style={[{ width: '100%' }, gridContainerStyle]}>
-              <View style={gridItemStyle}>
-                <MotivationButton icon={Briefcase} title="CPA" subtitle="Porta de entrada do mercado financeiro" selected={certification === 'cpa'} onPress={() => setCertification('cpa')} />
-              </View>
-              <View style={gridItemStyle}>
-                <MotivationButton icon={Briefcase} title="C-PRO R" subtitle="Especialista em relacionamentos" selected={certification === 'cpror'} onPress={() => setCertification('cpror')} />
-              </View>
-              <View style={gridItemStyle}>
-                <MotivationButton icon={Briefcase} title="C-PRO I" subtitle="Especialista em investimentos" selected={certification === 'cproi'} onPress={() => setCertification('cproi')} />
-              </View>
-            </View>
+            <MotivationButton icon={Briefcase} title="CPA" subtitle="Porta de entrada do mercado financeiro" selected={certification === 'cpa'} onPress={() => setCertification('cpa')} />
+            <MotivationButton icon={Briefcase} title="C-PRO R" subtitle="Especialista em relacionamentos" selected={certification === 'cpror'} onPress={() => setCertification('cpror')} />
+            <MotivationButton icon={Briefcase} title="C-PRO I" subtitle="Especialista em investimentos" selected={certification === 'cproi'} onPress={() => setCertification('cproi')} />
           </View>
         );
       case 2:
@@ -286,17 +321,9 @@ export default function OnboardingFlowScreen() {
           <View style={styles.stepContainer}>
             <Text style={styles.title}>Por que você quer essa certificação?</Text>
             <Text style={styles.subtitle}>Isso nos ajuda a ajustar seu plano de estudos.</Text>
-            <View style={[{ width: '100%' }, gridContainerStyle]}>
-              <View style={gridItemStyle}>
-                <MotivationButton icon={Briefcase} title="Entrar no mercado financeiro" selected={motivation === 'novato'} onPress={() => setMotivation('novato')} />
-              </View>
-              <View style={gridItemStyle}>
-                <MotivationButton icon={TrendingUp} title="Ser promovido(a)" selected={motivation === 'veterano'} onPress={() => setMotivation('veterano')} />
-              </View>
-              <View style={gridItemStyle}>
-                <MotivationButton icon={UserCheck} title="Aprender para crescer" selected={motivation === 'aprendiz'} onPress={() => setMotivation('aprendiz')} />
-              </View>
-            </View>
+            <MotivationButton icon={Briefcase} title="Entrar no mercado financeiro" selected={motivation === 'novato'} onPress={() => setMotivation('novato')} />
+            <MotivationButton icon={TrendingUp} title="Ser promovido(a)" selected={motivation === 'veterano'} onPress={() => setMotivation('veterano')} />
+            <MotivationButton icon={UserCheck} title="Aprender para crescer" selected={motivation === 'aprendiz'} onPress={() => setMotivation('aprendiz')} />
           </View>
         );
       case 3:
@@ -309,33 +336,30 @@ export default function OnboardingFlowScreen() {
             <View style={styles.questionCard}>
               <Text style={styles.questionText}>{dummyQuestion.question}</Text>
             </View>
-            <View style={[{ width: '100%' }, gridContainerStyle]}>
-              {Object.entries(dummyQuestion.options).map(([key, value]) => {
-                const isSelected = selectedAnswer === key;
-                return (
-                  <View key={key} style={gridItemStyle}>
-                    <TouchableOpacity
-                      style={[styles.optionBtn, isSelected && !isVerified && styles.optionSelected, isVerified && key === dummyQuestion.answer && styles.optionCorrect, isVerified && isSelected && key !== dummyQuestion.answer && styles.optionIncorrect, { marginBottom: isDesktop ? 0 : 12 }]}
-                      disabled={isVerified} onPress={() => setSelectedAnswer(key)}
-                    >
-                      <View style={styles.iconContainer}>
-                        {isVerified && key === dummyQuestion.answer && <Check color={cores.green500} />}
-                        {isVerified && isSelected && key !== dummyQuestion.answer && <X color={cores.red500} />}
-                        {!isVerified && <Text style={styles.optionKey}>{key}</Text>}
-                        {isVerified && !isSelected && key !== dummyQuestion.answer && <Text style={styles.optionKey}>{key}</Text>}
-                      </View>
-                      <Text style={styles.optionValue}>{value}</Text>
-                    </TouchableOpacity>
+            {Object.entries(dummyQuestion.options).map(([key, value]) => {
+              const isSelected = selectedAnswer === key;
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[ styles.optionBtn, isSelected && !isVerified && styles.optionSelected, isVerified && key === dummyQuestion.answer && styles.optionCorrect, isVerified && isSelected && key !== dummyQuestion.answer && styles.optionIncorrect, ]}
+                  disabled={isVerified} onPress={() => setSelectedAnswer(key)}
+                >
+                  <View style={styles.iconContainer}>
+                    {isVerified && key === dummyQuestion.answer && <Check color={cores.green500} />}
+                    {isVerified && isSelected && key !== dummyQuestion.answer && <X color={cores.red500} />}
+                    {!isVerified && <Text style={styles.optionKey}>{key}</Text>}
+                    {isVerified && !isSelected && key !== dummyQuestion.answer && <Text style={styles.optionKey}>{key}</Text>}
                   </View>
-                );
-              })}
-            </View>
+                  <Text style={styles.optionValue}>{value}</Text>
+                </TouchableOpacity>
+              );
+            })}
             {isVerified && explanationData && (
               <ScrollView style={styles.explanationScroll}>
-                <View style={[styles.explanationBox, isCorrect ? styles.explanationBoxInfo : styles.explanationBoxError]}>
-                  <View style={[styles.explanationHeader, isCorrect ? styles.explanationHeaderInfo : styles.explanationHeaderError]}>
+                <View style={[ styles.explanationBox, isCorrect ? styles.explanationBoxInfo : styles.explanationBoxError ]}>
+                  <View style={[ styles.explanationHeader, isCorrect ? styles.explanationHeaderInfo : styles.explanationHeaderError ]}>
                     <Sparkles size={16} color={isCorrect ? cores.primary : cores.red600} />
-                    <Text style={[styles.explanationHeaderText, isCorrect ? styles.explanationHeaderTextInfo : styles.explanationHeaderTextError]}>{explanationData.title}</Text>
+                    <Text style={[ styles.explanationHeaderText, isCorrect ? styles.explanationHeaderTextInfo : styles.explanationHeaderTextError ]}>{explanationData.title}</Text>
                   </View>
                   <MarkdownRenderer text={explanationData.text} style={styles.explanationText} />
                 </View>
@@ -367,7 +391,7 @@ export default function OnboardingFlowScreen() {
 
       case 6:
         return (
-          <View style={[styles.stepContainer, { alignItems: 'stretch' }]}>
+          <View style={[styles.stepContainer, {alignItems: 'stretch'}]}>
             <Text style={styles.title}>Como podemos te chamar?</Text>
             <Text style={styles.subtitle}>Seu nome será usado para personalizar sua jornada.</Text>
             <View style={styles.inputContainer}>
@@ -388,10 +412,10 @@ export default function OnboardingFlowScreen() {
       case 7:
         return (
           <View style={[styles.stepContainer, { alignItems: 'stretch' }]}>
-            <LoginAuth
+            <LoginAuth 
               onLoginSuccess={() => {
                 console.log("Onboarding: Login com sucesso! Avançando para o Paywall.");
-                nextStep();
+                nextStep(); 
               }}
             />
           </View>
@@ -417,30 +441,31 @@ export default function OnboardingFlowScreen() {
               {isPro ? "Tudo pronto! 🚀" : "Finalizando..."}
             </Text>
             <Text style={styles.subtitle}>
-              {isPro
-                ? "Sua assinatura Premium está ativa. Aproveite!"
+              {isPro 
+                ? "Sua assinatura Premium está ativa. Aproveite!" 
                 : "Estamos preparando seu ambiente de estudos..."}
             </Text>
-
+            
+            {/* Se for PRO, mostra botão de entrar direto */}
             {isPro && (
-              <TouchableOpacity
-                style={[styles.button, { backgroundColor: cores.primary }]}
-                onPress={handleCompleteOnboarding}
-              >
-                <Check size={18} color={cores.light} />
-                <Text style={[styles.buttonText, { marginLeft: 10 }]}>Acessar o App</Text>
-              </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.button, {backgroundColor: cores.primary}]} 
+                  onPress={handleCompleteOnboarding}
+                >
+                  <Check size={18} color={cores.light} />
+                  <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar o App</Text>
+                </TouchableOpacity>
             )}
 
             {!isPro && (
-              <PaywallModal
-                visible={true}
-                onClose={handleCompleteOnboarding}
-              />
+               <PaywallModal 
+                 visible={true} 
+                 onClose={handleCompleteOnboarding} 
+               />
             )}
           </View>
         );
-
+        
       default:
         return (
           <View style={styles.stepContainer}>
@@ -490,9 +515,9 @@ export default function OnboardingFlowScreen() {
       case 6:
         const isNameValid = name.trim().length > 1;
         return (
-          <TouchableOpacity
-            style={[styles.button, !isNameValid && styles.buttonDisabled]}
-            onPress={() => nextStep({ name: name.trim() })}
+          <TouchableOpacity 
+            style={[styles.button, !isNameValid && styles.buttonDisabled]} 
+            onPress={() => nextStep({ name: name.trim() })} 
             disabled={!isNameValid}
           >
             <Text style={styles.buttonText}>Continuar</Text>
@@ -500,11 +525,11 @@ export default function OnboardingFlowScreen() {
         );
 
       case 7:
-        return null;
+        return null; // O LoginAuth tem seus próprios botões
 
       case 8:
-        return null;
-
+        return null; // O Paywall (Modal) ou o botão PRO controlam o fluxo
+        
       default:
         return null;
     }
@@ -517,7 +542,9 @@ export default function OnboardingFlowScreen() {
         {renderStep()}
       </ScrollView>
       <View style={styles.footer}>
-        {renderFooterButton()}
+        <View style={styles.footerContentContainer}>
+            {renderFooterButton()}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -525,8 +552,17 @@ export default function OnboardingFlowScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: cores.light },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 24 },
-  stepContainer: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, width: '100%' },
+  // ADDED: alignItems center for desktop responsiveness
+  scrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 24, alignItems: 'center' },
+  // MODIFIED: maxWidth and alignSelf to prevent stretching on desktop
+  stepContainer: { 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingHorizontal: 24, 
+    width: '100%', 
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: 'center' 
+  },
   title: { fontSize: 26, fontWeight: 'bold', color: cores.secondary, textAlign: 'center', marginBottom: 12 },
   subtitle: { fontSize: 16, color: cores.gray500, textAlign: 'center', marginBottom: 24 },
   progressContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: cores.light, borderBottomWidth: 1, borderBottomColor: cores.gray100 },
@@ -573,33 +609,45 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8, },
   legendDot: { width: 10, height: 10, borderRadius: 5, },
   legendText: { color: cores.gray500, fontSize: 12, fontWeight: '500', },
-  graphSubtitle: { fontSize: 14, color: cores.gray500, textAlign: 'center', marginTop: 20, lineHeight: 20, },
-  carouselWrapper: { height: 220, marginBottom: 24, justifyContent: 'center', marginTop: 20 },
+  carouselWrapper: { height: 220, width: '100%', marginBottom: 24, justifyContent: 'center', marginTop: 20, alignItems: 'center' },
   featureCard: { backgroundColor: cores.light, borderRadius: 20, padding: 24, height: 150, justifyContent: 'space-between', borderWidth: 0.5, borderColor: cores.gray200, shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1, shadowRadius: 10, elevation: 3, alignItems: 'center' },
-  featureIconContainer: { width: 48, height: 48, borderRadius: 24, backgroundColor: cores.primaryLight, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
+  featureIconContainer: { width: 48, height: 48, borderRadius: 24, backgroundColor: cores.primaryLight, justifyContent: 'center', alignItems: 'center', marginBottom: 5},
   featureTitle: { fontSize: 15, fontWeight: 'bold', color: cores.secondary, textAlign: 'center' },
-  featureSubtitle: { fontSize: 11, color: cores.gray500, marginTop: 4, lineHeight: 20, marginBottom: 5, textAlign: 'center' },
+  featureSubtitle: { fontSize: 11, color: cores.gray500, marginTop: 4, lineHeight: 20, marginBottom: 5, textAlign: 'center'},
   paywallPlaceholder: { width: '100%', borderRadius: 16, borderWidth: 2, borderColor: cores.gray100, padding: 24, alignItems: 'center', backgroundColor: cores.light },
   paywallPlaceholderText: { fontSize: 14, color: cores.gray500, textAlign: 'center', fontStyle: 'italic', marginBottom: 24, lineHeight: 20 },
   inputContainer: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: cores.gray100,
     borderRadius: 12, marginBottom: 16, paddingHorizontal: 12, borderWidth: 1,
     borderColor: cores.gray100,
-    width: '100%', // Garante a largura total
+    width: '100%',
   },
-  inputIcon: {
-    marginRight: 8
+  inputIcon: { 
+    marginRight: 8 
   },
-  input: {
-    flex: 1,
-    height: 50,
-    fontSize: 16,
-    color: cores.secondary
+  input: { 
+    flex: 1, 
+    height: 50, 
+    fontSize: 16, 
+    color: cores.secondary 
   },
   button: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', backgroundColor: cores.primary, width: '100%' },
   buttonSecondary: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', backgroundColor: cores.light, borderWidth: 1.5, borderColor: cores.gray200, width: '100%', marginTop: 12 },
   buttonSecondaryText: { color: cores.gray500, fontSize: 16, fontWeight: 'bold' },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: cores.light, fontSize: 16, fontWeight: 'bold' },
-  footer: { paddingHorizontal: 24, paddingVertical: 16, backgroundColor: cores.light, borderTopWidth: 1, borderTopColor: cores.gray100 },
+  footer: { 
+    paddingHorizontal: 24, 
+    paddingVertical: 16, 
+    backgroundColor: cores.light, 
+    borderTopWidth: 1, 
+    borderTopColor: cores.gray100,
+    alignItems: 'center', 
+    width: '100%'
+  },
+  footerContentContainer: {
+    width: '100%',
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: 'center',
+  }
 });
