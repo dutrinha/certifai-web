@@ -626,6 +626,7 @@ const styles = StyleSheet.create({
     marginRight: 8 
   },
   input: { 
+    outlineStyle: 'none',
     flex: 1, 
     height: 50, 
     fontSize: 16, 
