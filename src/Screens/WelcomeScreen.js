@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 const placeholderImages = {
+  // Estas imagens estão em src/assets, então ../assets/ está correto
   image1: require('../assets/1.png'),
   image2: require('../assets/2.png'),
   image3: require('../assets/3.png'),
@@ -75,7 +76,6 @@ export default function WelcomeScreen() {
   const isDesktop = Platform.OS === 'web' && windowWidth > 768;
 
   // --- RESPONSIVE VARIABLES ---
-  // Smaller fonts for small laptops/tablets (width < 1200px)
   const isSmallDesktop = windowWidth < 1200;
   
   const titleFontSize = isSmallDesktop ? 42 : 64;
@@ -93,7 +93,6 @@ export default function WelcomeScreen() {
 
   const handleScroll = (event) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
-    // Dynamic width for snap calculation
     const slideWidth = isDesktop ? desktopCarouselWidth : windowWidth;
     const index = Math.round(scrollPosition / slideWidth);
     setActiveIndex(index);
@@ -110,11 +109,10 @@ export default function WelcomeScreen() {
   const handleNext = () => scrollToIndex(activeIndex + 1);
   const handlePrev = () => scrollToIndex(activeIndex - 1);
 
-  // --- DESKTOP LAYOUT (FIXED) ---
+  // --- DESKTOP LAYOUT ---
   if (isDesktop) {
     return (
       <View style={{ flex: 1, backgroundColor: cores.light }}>
-        {/* FIX 1: Wrap everything in ScrollView so content pushes footer down instead of overlapping */}
         <ScrollView 
           contentContainerStyle={{ 
             flexGrow: 1, 
@@ -126,7 +124,8 @@ export default function WelcomeScreen() {
           {/* Navbar */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: paddingHorizontal, paddingVertical: 32 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Image source={require('../assets/favicon.png')} style={{ width: 40, height: 40, marginRight: 12 }} resizeMode="contain" />
+              {/* CORREÇÃO AQUI: ../../assets/favicon.png */}
+              <Image source={require('../../assets/favicon.png')} style={{ width: 40, height: 40, marginRight: 12 }} resizeMode="contain" />
               <Text style={{ fontSize: 24, fontWeight: 'bold', color: cores.secondary }}>CertifAI</Text>
             </View>
             <TouchableOpacity onPress={handleLogin} style={{ paddingHorizontal: 24, paddingVertical: 12 }}>
@@ -134,17 +133,15 @@ export default function WelcomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Main Content - Flex Row */}
+          {/* Main Content */}
           <View style={{ 
             flexDirection: 'row', 
             paddingHorizontal: paddingHorizontal, 
-            alignItems: 'center', // Vertically center content
-            flexWrap: 'wrap-reverse', // Allows stacking on very narrow screens if needed, though >768 usually fits
+            alignItems: 'center', 
+            flexWrap: 'wrap-reverse', 
             gap: 40,
-            paddingBottom: 60, // Space before footer
+            paddingBottom: 60,
           }}>
-            
-            {/* Left Column: Text */}
             <View style={{ flex: 1, minWidth: 350 }}>
               <View style={{ backgroundColor: cores.primaryLight, alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, marginBottom: 24 }}>
                 <Text style={{ color: cores.primary, fontWeight: '700', fontSize: 14, letterSpacing: 0.5 }}>APROVADO POR +1.000 ALUNOS</Text>
@@ -173,9 +170,6 @@ export default function WelcomeScreen() {
 
             {/* Right Column: Carousel */}
             <View style={{ flex: 1, minWidth: 350, alignItems: 'center', justifyContent: 'center' }}>
-              
-              {/* Background ball removed from here */}
-
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, zIndex: 1 }}>
                 <TouchableOpacity onPress={handlePrev} disabled={activeIndex === 0} style={[styles.desktopNavBtn, activeIndex === 0 && { opacity: 0.3 }]}>
                   <ChevronLeft size={24} color={cores.secondary} />
@@ -186,7 +180,7 @@ export default function WelcomeScreen() {
                     ref={scrollViewRef}
                     horizontal
                     pagingEnabled
-                    scrollEnabled={false} // Disable manual scroll on desktop to encourage buttons
+                    scrollEnabled={false}
                     showsHorizontalScrollIndicator={false}
                     style={{ width: desktopCarouselWidth }}
                   >
@@ -196,7 +190,7 @@ export default function WelcomeScreen() {
                           source={item.image}
                           style={{ 
                             width: '100%', 
-                            height: desktopCarouselWidth * 1.5, // Aspect ratio roughly for phone screenshot
+                            height: desktopCarouselWidth * 1.5, 
                             maxHeight: 500,
                             borderRadius: 24, 
                             marginBottom: 24 
@@ -208,8 +202,6 @@ export default function WelcomeScreen() {
                       </View>
                     ))}
                   </ScrollView>
-                  
-                  {/* Pagination Dots */}
                   <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 24 }}>
                     {carouselData.map((_, index) => (
                       <View key={index} style={[styles.paginationDot, index === activeIndex && styles.paginationDotActive]} />
@@ -242,7 +234,8 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Image source={require('../assets/favicon.png')} style={{ width: 32, height: 32, marginRight: 8 }} resizeMode="contain" />
+          {/* CORREÇÃO AQUI: ../../assets/favicon.png */}
+          <Image source={require('../../assets/favicon.png')} style={{ width: 32, height: 32, marginRight: 8 }} resizeMode="contain" />
           <Text style={{ fontSize: 20, fontWeight: 'bold', color: cores.secondary }}>CertifAI</Text>
         </View>
         <TouchableOpacity onPress={handleLogin} style={{ padding: 8 }}>
