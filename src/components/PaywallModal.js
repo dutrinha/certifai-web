@@ -2,24 +2,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Platform, ActivityIndicator, AppState, Image, Alert, TextInput, Dimensions, StatusBar, Animated
+  Platform, ActivityIndicator, AppState, Image, Alert, TextInput, Dimensions, StatusBar, Animated, SafeAreaView
 } from 'react-native';
 import { 
   X, Check, Star, ArrowLeft, ShieldCheck, Trophy, Lock, 
-  CreditCard, QrCode, ChevronDown, Copy, Clock, Zap
+  CreditCard, QrCode, ChevronDown, Copy, Clock, Zap,
+  Brain, Target, TrendingUp, BookOpen
 } from 'lucide-react-native';
-import { useAuth, supabase } from '../context/AuthContext';
+import { useAuth, supabase } from '../context/AuthContext'; // Ajuste o caminho conforme seu projeto
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const CONTENT_MAX_WIDTH = 500;
 
 const theme = {
   background: '#F7FAFC', cardBg: '#FFFFFF', primary: '#00C853',
   primaryLight: '#E6F8EB', text: '#1A202C', textSec: '#64748B',
-  border: '#E2E8F0', shadow: 'rgba(0, 0, 0, 0.08)', red: '#EA1D2C', // Vermelho iFood
-  gold: '#FFD700', orange: '#FF6B00', darkBlue: '#0F172A'
+  border: '#E2E8F0', shadow: 'rgba(0, 0, 0, 0.08)', 
+  red: '#EA1D2C', 
+  gold: '#FFD700', orange: '#FF6B00', darkBlue: '#0F172A',
+  black: '#000000', white: '#FFFFFF',
+  grayInput: '#F2F4F7'
 };
 
 export default function PaywallModal({ visible, onClose }) {
@@ -39,19 +43,17 @@ export default function PaywallModal({ visible, onClose }) {
   const [cpf, setCpf] = useState('');
   const [name, setName] = useState('');
 
-  // Animação de pulsação para o botão
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const PRICES = { monthly: 29.90, yearly: 197.00 }; 
-  const DAILY_PRICE_YEARLY = (PRICES.yearly / 365).toFixed(2);
   const MONTHLY_PRICE_ANUAL_EQUIVALENT = (PRICES.yearly / 12).toFixed(2);
-  const DISCOUNT_PERCENTAGE = Math.round(((PRICES.monthly * 12 - PRICES.yearly) / (PRICES.monthly * 12)) * 100);
+  const DISCOUNT_PERCENTAGE = 45; 
 
   useEffect(() => {
     if (visible) {
         Animated.loop(
             Animated.sequence([
-                Animated.timing(pulseAnim, { toValue: 1.05, duration: 800, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1.03, duration: 800, useNativeDriver: true }),
                 Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true })
             ])
         ).start();
@@ -62,9 +64,8 @@ export default function PaywallModal({ visible, onClose }) {
     if (!visible) return;
     if (refreshSubscription) refreshSubscription();
     if (user?.user_metadata?.full_name) setName(user.user_metadata.full_name);
-    
     setInstallments(1);
-
+    
     const intervalId = setInterval(() => {
       if (step === 'payment' || loadingCard) {
           if (refreshSubscription) refreshSubscription();
@@ -77,7 +78,6 @@ export default function PaywallModal({ visible, onClose }) {
       }
       appState.current = nextAppState;
     });
-
     return () => {
       clearInterval(intervalId);
       subscription.remove();
@@ -101,87 +101,59 @@ export default function PaywallModal({ visible, onClose }) {
   };
 
   const handleCardCheckout = async () => {
-    if (!user?.email) {
-      Alert.alert("Erro", "E-mail não identificado.");
-      return;
-    }
+    if (!user?.email) { Alert.alert("Erro", "E-mail não identificado."); return; }
     setLoadingCard(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-charge', {
         body: {
-          userId: user.id,
-          email: user.email,
-          name: name.trim() || user.user_metadata?.full_name,
-          cpf: cpf.replace(/\D/g, ''),
-          cycle: selectedPlan,
-          method: 'credit_card',
+          userId: user.id, email: user.email, name: name.trim() || user.user_metadata?.full_name,
+          cpf: cpf.replace(/\D/g, ''), cycle: selectedPlan, method: 'credit_card',
           installments: selectedPlan === 'yearly' ? installments : 1,
         },
       });
-
       if (error) throw error;
-      if (!data?.checkoutUrl) throw new Error('URL de pagamento não retornada.');
-
+      if (!data?.checkoutUrl) throw new Error('URL não retornada.');
       await Linking.openURL(data.checkoutUrl);
     } catch (error) {
       console.error('Erro Checkout:', error);
-      Alert.alert('Erro', 'Não foi possível gerar o link de pagamento. Tente novamente.');
-    } finally {
-      setLoadingCard(false);
-    }
+      Alert.alert('Erro', 'Tente novamente.');
+    } finally { setLoadingCard(false); }
   };
 
   const handleCreatePix = async () => {
     const cpfClean = cpf.replace(/\D/g, '');
-    if (cpfClean.length !== 11) {
-      Alert.alert("CPF Inválido", "Por favor, digite um CPF válido para a nota fiscal.");
-      return;
-    }
-    if (!name.trim()) {
-      Alert.alert("Nome Inválido", "Por favor, digite seu nome completo.");
-      return;
-    }
+    if (cpfClean.length !== 11) { Alert.alert("CPF Inválido", "Digite um CPF válido."); return; }
+    if (!name.trim()) { Alert.alert("Nome Inválido", "Digite seu nome."); return; }
     setLoadingPix(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-charge', {
-        body: {
-          userId: user.id,
-          email: user.email,
-          name: name.trim(),
-          cpf: cpfClean,
-          cycle: selectedPlan,
-          method: 'pix', 
-        },
+        body: { userId: user.id, email: user.email, name: name.trim(), cpf: cpfClean, cycle: selectedPlan, method: 'pix' },
       });
       if (error) throw error;
       setPixData(data);
       setStep('payment');
     } catch (error) {
-      console.error('Erro Pix:', error);
-      Alert.alert('Erro', `Falha ao gerar Pix: ${error.message || 'Tente novamente.'}`);
-    } finally {
-      setLoadingPix(false);
-    }
+      Alert.alert('Erro', `Falha ao gerar Pix: ${error.message}`);
+    } finally { setLoadingPix(false); }
   };
 
   const handleCopyPix = async () => {
     if (pixData?.copyPaste) {
       await Clipboard.setStringAsync(pixData.copyPaste);
-      if (Platform.OS === 'web') {
-        window.alert('Código Pix copiado!');
-      } else {
-        Alert.alert('Sucesso', 'Código Pix copiado para a área de transferência.');
-      }
+      if (Platform.OS === 'web') window.alert('Copiado!');
+      else Alert.alert('Sucesso', 'Código Pix copiado.');
     }
   };
 
-  const FeatureRow = ({ text, bold }) => (
-    <View style={styles.featureRow}>
-      <View style={styles.checkCircle}><Check size={12} color="#FFF" strokeWidth={4} /></View>
-      <Text style={styles.featureText}>
-        {bold ? <Text style={{fontWeight: 'bold'}}>{bold} </Text> : null}
-        {text}
-      </Text>
+  const BenefitRow = ({ icon: Icon, title, description }) => (
+    <View style={styles.benefitRow}>
+      <View style={styles.benefitIconBox}>
+        <Icon size={20} color={theme.primary} strokeWidth={2.5} />
+      </View>
+      <View style={{flex: 1}}>
+        <Text style={styles.benefitTitle}>{title}</Text>
+        <Text style={styles.benefitDesc}>{description}</Text>
+      </View>
     </View>
   );
 
@@ -193,254 +165,167 @@ export default function PaywallModal({ visible, onClose }) {
             onPress={() => { setInstallments(num); setShowInstallmentPicker(false); }}
         >
             <Text style={[styles.installmentText, installments === num && {color: theme.primary, fontWeight: 'bold'}]}>
-                {num}x de R$ {value.toFixed(2).replace('.', ',')}
+                {num}x R$ {value.toFixed(2).replace('.', ',')}
             </Text>
             {installments === num && <Check size={16} color={theme.primary} />}
         </TouchableOpacity>
     )
   }
 
-  // --- TELA 1: OFERTA IRRESISTÍVEL ---
+  // --- RENDER OFFER: VERSÃO COM RODAPÉ FIXO ---
   const renderOffer = () => (
-    <View style={{ flex: 1 }}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={onClose} style={styles.closeIconHitbox}>
-          <X size={24} color={theme.textSec} />
-        </TouchableOpacity>
-      </View>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <View style={styles.mainLayout}>
         
-        {/* HEADLINE DE ALTO IMPACTO */}
-        <View style={styles.heroContainer}>
-          <View style={styles.tagContainer}>
-            <Star size={14} color="#FFF" fill="#FFF" />
-            <Text style={styles.tagText}>OFERTA POR TEMPO LIMITADO</Text>
-          </View>
-          <Text style={styles.heroTitle}>
-            Sua Carreira no Mercado Financeiro <Text style={{ color: theme.primary }}>Começa Agora.</Text>
-          </Text>
-          <Text style={styles.heroSubtitle}>
-            Junte-se a <Text style={{fontWeight: 'bold', color: theme.text}}>+1.000 alunos aprovados</Text> e pare de perder tempo estudando errado.
-          </Text>
+        {/* 1. HEADER FIXO */}
+        <View style={styles.fixedHeader}>
+          <TouchableOpacity onPress={onClose} style={styles.closeIconHitbox}>
+            <X size={20} color={theme.textSec} />
+          </TouchableOpacity>
         </View>
 
-        {/* BENEFÍCIOS CLAROS */}
-        <View style={styles.featuresList}>
-          <FeatureRow bold="Professor IA 24/7:" text="Tire dúvidas na hora, sem esperar." />
-          <FeatureRow bold="Correção Inteligente:" text="Entenda exatamente onde você errou." />
-          <FeatureRow bold="Simulados Ilimitados:" text="Treine até se sentir 100% seguro." />
-          <FeatureRow bold="Todas as Certificações:" text="CPA, C-PRO R, C-PRO I e mais." />
-        </View>
-
-        {/* SELETOR DE PLANOS (ANCORAGEM) */}
-        <View style={styles.planSelector}>
-          {/* PLANO ANUAL (HERÓI) */}
-          <TouchableOpacity 
-            style={[styles.planCard, selectedPlan === 'yearly' && styles.planCardSelected]} 
-            onPress={() => setSelectedPlan('yearly')}
-            activeOpacity={0.9}
-          >
-            {selectedPlan === 'yearly' && (
-                <View style={styles.popularBadge}>
-                    <Text style={styles.popularText}>MAIS VENDIDO 🔥</Text>
-                </View>
-            )}
-            <View style={styles.planHeaderRow}>
-              <View>
-                <Text style={[styles.planName, selectedPlan === 'yearly' && { color: theme.primary }]}>Plano Anual</Text>
-                <Text style={styles.planBestValue}>Menos de R$ {DAILY_PRICE_YEARLY}/dia</Text>
+        {/* 2. CONTEÚDO ROLÁVEL (HERO + BENEFÍCIOS) */}
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ 
+            paddingHorizontal: 20,
+            paddingTop: 10,
+            paddingBottom: 380 // Espaço extra para o conteúdo não ficar atrás do footer
+          }}
+        >
+            {/* HERO SECTION */}
+            <View style={styles.heroContainer}>
+              <View style={styles.tagContainer}>
+                <Star size={12} color="#FFF" fill="#FFF" />
+                <Text style={styles.tagText}>OFERTA POR TEMPO LIMITADO</Text>
               </View>
-              {selectedPlan === 'yearly' ? (
-                <View style={styles.radioSelected}><View style={styles.radioInner} /></View>
-              ) : (
-                <View style={styles.radioUnselected} />
-              )}
+              <Text style={styles.heroTitle}>
+                Sua Carreira no Mercado Financeiro <Text style={{ color: theme.primary }}>Começa agora.</Text>
+              </Text>
+              <Text style={styles.heroSubtitle}>
+                Desbloqueie o método que já aprovou <Text style={{fontWeight: 'bold', color: theme.text}}>+1.000 profissionais</Text> e elimine o risco de reprovar.
+              </Text>
             </View>
-            
-            <View style={styles.pricingContainer}>
-                <Text style={styles.oldPrice}>R$ {(PRICES.monthly * 12).toFixed(2)}</Text>
-                <View style={{flexDirection: 'row', alignItems: 'flex-end', gap: 4}}>
-                    <Text style={styles.currency}>R$</Text>
-                    <Text style={styles.bigPrice}>{MONTHLY_PRICE_ANUAL_EQUIVALENT.replace('.', ',')}</Text>
-                    <Text style={styles.period}>/mês</Text>
+
+            {/* LISTA DE VANTAGENS */}
+            <View style={styles.benefitsListContainer}>
+              
+              <BenefitRow 
+                icon={Brain} title="Mentor IA Pessoal 24/7" 
+                description="Tire dúvidas complexas na hora e receba explicações detalhadas."
+              />
+              <BenefitRow 
+                icon={Target} title="Simulados Reais de Prova" 
+                description="Banco de questões idênticas às da prova oficial."
+              />
+              <BenefitRow 
+                icon={TrendingUp} title="Flashcards Inteligentes" 
+                description="Metodologia de retenção que garante que você não esqueça o que estudou."
+              />
+              <BenefitRow 
+                icon={BookOpen} title="Cases Práticos de Mercado" 
+                description="Não decore apenas. Aprenda a aplicar o conhecimento no dia a dia."
+              />
+              <BenefitRow 
+                icon={Trophy} title="Acesso Total Imediato" 
+                description="Libere todas as certificações (CPA, C-Pro R, C-Pro I) em um único plano."
+              />
+
+            </View>
+        </ScrollView>
+
+        {/* 3. RODAPÉ FIXO (PLANOS + BOTÃO) */}
+        <View style={styles.fixedBottomContainer}>
+            <View style={styles.plansContainerCompact}>
+              {/* PLANO ANUAL */}
+              <TouchableOpacity 
+                style={[styles.planCardOld, selectedPlan === 'yearly' && styles.planCardSelectedOld]} 
+                onPress={() => setSelectedPlan('yearly')}
+                activeOpacity={0.9}
+              >
+                <View style={styles.popularBadgeOld}>
+                    <Text style={styles.popularTextOld}>MAIS VENDIDO</Text>
+                </View>
+                <View style={styles.planRowOld}>
+                    <View style={{flex: 1}}>
+                        <Text style={styles.planNameOldGreen}>Plano Anual</Text>
+                        <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
+                            <Text style={styles.savingsTextOld}>ECONOMIZE {DISCOUNT_PERCENTAGE}%</Text>
+                        </View>
+                    </View>
+                    <View style={{alignItems: 'flex-end'}}>
+                        <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
+                            <Text style={styles.currencyOld}>R$</Text>
+                            <Text style={styles.bigPriceOld}>{MONTHLY_PRICE_ANUAL_EQUIVALENT.replace('.', ',')}</Text>
+                            <Text style={styles.periodOld}>/mês</Text>
+                        </View>
+                        <Text style={styles.fullPriceTextOld}>R$ {PRICES.yearly.toFixed(2).replace('.', ',')} à vista</Text>
+                    </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* PLANO MENSAL */}
+              <TouchableOpacity 
+                style={[styles.planCardOld, selectedPlan === 'monthly' && styles.planCardSelectedOldMonthly]} 
+                onPress={() => setSelectedPlan('monthly')}
+                activeOpacity={0.9}
+              >
+                <View style={styles.planRowOld}>
+                    <View style={{flex: 1}}>
+                        <Text style={styles.planNameOldBlack}>Plano Mensal</Text>
+                        <Text style={styles.planNoteOld}>Sem fidelidade</Text>
+                    </View>
+                    <View style={{alignItems: 'flex-end'}}>
+                        <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
+                            <Text style={styles.currencyOld}>R$</Text>
+                            <Text style={styles.bigPriceOld}>{PRICES.monthly.toFixed(2).replace('.', ',')}</Text>
+                            <Text style={styles.periodOld}>/mês</Text>
+                        </View>
+                    </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* BOTÃO CTA */}
+            <View style={styles.footerCompact}>
+                <Animated.View style={{ transform: [{ scale: pulseAnim }], width: '100%' }}>
+                    <TouchableOpacity style={styles.ctaButtonCompact} onPress={() => setStep('method')}>
+                    <Text style={styles.ctaTextCompact}>COMEÇAR AGORA</Text>
+                    </TouchableOpacity>
+                </Animated.View>
+                <View style={styles.guaranteeRowCompact}>
+                    <ShieldCheck size={14} color={theme.textSec} />
+                    <Text style={styles.guaranteeTextCompact}>Compra Segura • 7 Dias de Garantia</Text>
                 </View>
             </View>
-            
-            <View style={styles.savingsBadge}>
-                <Text style={styles.savingsText}>ECONOMIA DE {DISCOUNT_PERCENTAGE}% HOJE</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* PLANO MENSAL (ÂNCORA) */}
-          <TouchableOpacity 
-            style={[styles.planCard, selectedPlan === 'monthly' && styles.planCardSelected]} 
-            onPress={() => setSelectedPlan('monthly')}
-            activeOpacity={0.9}
-          >
-            <View style={styles.planHeaderRow}>
-              <Text style={[styles.planName, selectedPlan === 'monthly' && { color: theme.text }]}>Plano Mensal</Text>
-              {selectedPlan === 'monthly' ? (
-                <View style={styles.radioSelected}><View style={styles.radioInner} /></View>
-              ) : (
-                <View style={styles.radioUnselected} />
-              )}
-            </View>
-            <Text style={styles.planPriceSimple}>R$ {PRICES.monthly.toFixed(2).replace('.', ',')} /mês</Text>
-            <Text style={styles.planNote}>Sem fidelidade. Cancele quando quiser.</Text>
-          </TouchableOpacity>
         </View>
 
-        {/* CTA ANIMADO */}
-        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-            <TouchableOpacity style={styles.ctaButton} onPress={() => setStep('method')}>
-            <Text style={styles.ctaText}>QUERO SER APROVADO AGORA</Text>
-            <Zap size={20} color="#FFF" fill="#FFF" style={{marginLeft: 8}} />
-            </TouchableOpacity>
-        </Animated.View>
-
-        <View style={styles.guaranteeContainer}>
-            <ShieldCheck size={16} color={theme.textSec} />
-            <Text style={styles.guaranteeText}>Compra Segura • Acesso Imediato</Text>
-        </View>
-
-      </ScrollView>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 
-  // --- TELA 2: DADOS (CPF) ---
-  const renderCpfInput = () => (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <View style={styles.simpleHeader}>
-        <TouchableOpacity onPress={() => setStep('method')} style={styles.backButton}><ArrowLeft color={theme.text} size={24} /></TouchableOpacity>
-        <Text style={styles.simpleHeaderTitle}>Dados para Nota Fiscal</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      <View style={styles.centerContent}>
-        <View style={styles.progressSteps}>
-            <View style={[styles.stepDot, styles.stepActive]} />
-            <View style={[styles.stepDot, styles.stepActive]} />
-            <View style={styles.stepDot} />
-        </View>
-        
-        <Text style={styles.inputTitle}>Para quem vamos emitir a nota?</Text>
-        <Text style={styles.inputSubtitle}>Precisamos apenas do seu nome e CPF para liberar seu acesso.</Text>
-
-        <Text style={styles.inputLabel}>Nome Completo</Text>
-        <TextInput 
-            style={styles.inputField} 
-            placeholder="Seu nome" 
-            placeholderTextColor={theme.textSec} 
-            value={name} 
-            onChangeText={setName} 
-            autoCapitalize="words"
-        />
-        
-        <Text style={styles.inputLabel}>CPF</Text>
-        <TextInput 
-            style={styles.inputField} 
-            placeholder="000.000.000-00" 
-            placeholderTextColor={theme.textSec} 
-            keyboardType="numeric" 
-            value={cpf} 
-            onChangeText={handleCpfChange} 
-            maxLength={14} 
-        />
-        
-        <TouchableOpacity style={[styles.ctaButton, { marginTop: 24 }]} onPress={handleCreatePix} disabled={loadingPix}>
-          {loadingPix ? <ActivityIndicator color="#FFF" /> : <Text style={styles.ctaText}>GERAR CÓDIGO PIX</Text>}
-        </TouchableOpacity>
-        
-        <View style={styles.secureBadge}>
-            <Lock size={12} color={theme.primary} />
-            <Text style={styles.secureText}>Seus dados estão protegidos.</Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  // --- TELA 3: PAGAMENTO (PIX COPIA E COLA - ESTILO IFOOD) ---
-  const renderPayment = () => (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <View style={styles.simpleHeader}>
-        <TouchableOpacity onPress={() => setStep('cpf')} style={styles.backButton}><ArrowLeft color={theme.text} size={24} /></TouchableOpacity>
-        <Text style={styles.simpleHeaderTitle}>Pagamento via Pix</Text>
-        <View style={{ width: 24 }} />
-      </View>
-      
-      <ScrollView contentContainerStyle={styles.centerContent}>
-        <View style={styles.timerContainer}>
-            <Clock size={16} color={theme.orange} />
-            <Text style={styles.timerText}>Aguardando pagamento...</Text>
-        </View>
-
-        <Text style={styles.paymentInstructions}>
-            Escaneie o QR Code ou use o <Text style={{fontWeight: 'bold'}}>Pix Copia e Cola</Text> abaixo para liberar seu acesso imediatamente.
-        </Text>
-        
-        {/* QR CODE BOX */}
-        <View style={styles.qrCodeBox}>
-          {pixData?.qrCodeBase64 ? (
-            <Image source={{ uri: `data:image/png;base64,${pixData.qrCodeBase64}` }} style={{ width: 220, height: 220 }} resizeMode="contain" />
-          ) : (
-            <ActivityIndicator size="large" color={theme.primary} />
-          )}
-        </View>
-
-        {/* PIX COPIA E COLA ESTILO IFOOD */}
-        <View style={styles.copyPasteContainer}>
-            <View style={styles.copyPasteTextContainer}>
-                <Text style={styles.copyPasteLabel}>Pix Copia e Cola</Text>
-                <Text style={styles.copyPasteCode} numberOfLines={1} ellipsizeMode="middle">
-                    {pixData?.copyPaste || "Carregando código..."}
-                </Text>
-            </View>
-            <TouchableOpacity style={styles.copyPasteButton} onPress={handleCopyPix}>
-                <Copy size={20} color="#FFF" />
-                <Text style={styles.copyPasteButtonText}>Copiar</Text>
-            </TouchableOpacity>
-        </View>
-
-        <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>Como pagar?</Text>
-            <Text style={styles.infoText}>1. Abra o app do seu banco.</Text>
-            <Text style={styles.infoText}>2. Escolha pagar via Pix.</Text>
-            <Text style={styles.infoText}>3. Cole o código acima ou escaneie o QR Code.</Text>
-        </View>
-      </ScrollView>
-    </View>
-  );
-
-  // --- TELA DE FORMA DE PAGAMENTO (REUTILIZADA) ---
   const renderPaymentMethod = () => (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <View style={styles.simpleHeader}>
-        <TouchableOpacity onPress={() => setStep('offer')} style={styles.backButton}><ArrowLeft color={theme.text} size={24} /></TouchableOpacity>
-        <Text style={styles.simpleHeaderTitle}>Pagamento</Text>
-        <View style={{ width: 24 }} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <View style={styles.compactHeader}>
+        <TouchableOpacity onPress={() => setStep('offer')} style={{padding: 8}}><ArrowLeft color={theme.text} size={20} /></TouchableOpacity>
+        <Text style={styles.compactHeaderTitle}>Pagamento</Text>
+        <View style={{width: 20}} />
       </View>
-      <ScrollView contentContainerStyle={styles.centerContent}>
-        <Text style={styles.sectionTitle}>Como você prefere pagar?</Text>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <Text style={styles.inputLabel}>Escolha a forma de pagamento:</Text>
         
         <TouchableOpacity style={[styles.methodCard, paymentMethod === 'pix' && styles.methodCardSelected]} onPress={() => setPaymentMethod('pix')}>
-          <View style={styles.methodIconContainer}><QrCode size={24} color={paymentMethod === 'pix' ? theme.primary : theme.textSec} /></View>
-          <View style={{flex: 1}}>
-            <Text style={[styles.methodTitle, paymentMethod === 'pix' && {color: theme.primary}]}>Pix (Liberação Imediata)</Text>
-            <Text style={styles.methodSubtitle}>Aprovação em segundos</Text>
-          </View>
-          {paymentMethod === 'pix' && <View style={styles.radioSelected}><View style={styles.radioInner} /></View>}
+          <QrCode size={20} color={paymentMethod === 'pix' ? theme.primary : theme.textSec} />
+          <Text style={[styles.methodTitle, paymentMethod === 'pix' && {color: theme.primary}]}>Pix (Imediato)</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.methodCard, paymentMethod === 'card' && styles.methodCardSelected]} onPress={() => setPaymentMethod('card')}>
-          <View style={styles.methodIconContainer}><CreditCard size={24} color={paymentMethod === 'card' ? theme.primary : theme.textSec} /></View>
-          <View style={{flex: 1}}>
-            <Text style={[styles.methodTitle, paymentMethod === 'card' && {color: theme.primary}]}>Cartão de Crédito</Text>
-            <Text style={styles.methodSubtitle}>Até 12x no plano anual</Text>
-          </View>
-          {paymentMethod === 'card' && <View style={styles.radioSelected}><View style={styles.radioInner} /></View>}
+          <CreditCard size={20} color={paymentMethod === 'card' ? theme.primary : theme.textSec} />
+          <Text style={[styles.methodTitle, paymentMethod === 'card' && {color: theme.primary}]}>Cartão de Crédito</Text>
         </TouchableOpacity>
 
         {paymentMethod === 'card' && selectedPlan === 'yearly' && (
-            <View style={styles.installmentContainer}>
+            <View style={{marginTop: 12}}>
                 <Text style={styles.inputLabel}>Parcelamento</Text>
                 <TouchableOpacity style={styles.installmentSelector} onPress={() => setShowInstallmentPicker(!showInstallmentPicker)}>
                     <Text style={styles.installmentSelectorText}>
@@ -450,10 +335,8 @@ export default function PaywallModal({ visible, onClose }) {
                 </TouchableOpacity>
                 {showInstallmentPicker && (
                     <View style={styles.installmentDropdown}>
-                        <ScrollView style={{maxHeight: 200}} nestedScrollEnabled={true}>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => (
-                                <InstallmentOption key={num} num={num} />
-                            ))}
+                        <ScrollView style={{maxHeight: 150}} nestedScrollEnabled={true}>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => <InstallmentOption key={num} num={num} />)}
                         </ScrollView>
                     </View>
                 )}
@@ -461,22 +344,77 @@ export default function PaywallModal({ visible, onClose }) {
         )}
 
         <TouchableOpacity
-          style={[styles.ctaButton, { marginTop: 32 }]}
-          onPress={() => {
-            if (paymentMethod === 'pix') setStep('cpf');
-            else handleCardCheckout();
-          }}
+          style={[styles.ctaButtonCompact, { marginTop: 24 }]}
+          onPress={() => { if (paymentMethod === 'pix') setStep('cpf'); else handleCardCheckout(); }}
           disabled={loadingCard}
         >
-          {loadingCard ? <ActivityIndicator color="#FFF" /> : <Text style={styles.ctaText}>CONTINUAR PARA DADOS</Text>}
+          {loadingCard ? <ActivityIndicator color="#FFF" /> : <Text style={styles.ctaTextCompact}>CONTINUAR</Text>}
         </TouchableOpacity>
-        
-        <View style={styles.secureHintContainer}>
-          <Lock size={14} color={theme.textSec} />
-          <Text style={styles.guaranteeText}>Ambiente criptografado e seguro</Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+
+  const renderCpfInput = () => (
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <View style={styles.compactHeader}>
+        <TouchableOpacity onPress={() => setStep('method')} style={{padding: 8}}><ArrowLeft color={theme.text} size={20} /></TouchableOpacity>
+        <Text style={styles.compactHeaderTitle}>Dados Fiscais</Text>
+        <View style={{width: 20}} />
+      </View>
+      <View style={{ padding: 20 }}>
+        <Text style={styles.inputLabel}>Nome Completo</Text>
+        <TextInput 
+            style={styles.inputFieldCompact} placeholder="Seu nome" value={name} onChangeText={setName} 
+        />
+        <Text style={styles.inputLabel}>CPF (apenas números)</Text>
+        <TextInput 
+            style={styles.inputFieldCompact} placeholder="000.000.000-00" keyboardType="numeric" value={cpf} onChangeText={handleCpfChange} maxLength={14} 
+        />
+        <TouchableOpacity style={[styles.ctaButtonCompact, { marginTop: 24 }]} onPress={handleCreatePix} disabled={loadingPix}>
+          {loadingPix ? <ActivityIndicator color="#FFF" /> : <Text style={styles.ctaTextCompact}>GERAR PIX</Text>}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+
+  const renderPayment = () => (
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <View style={styles.compactHeader}>
+        <TouchableOpacity onPress={() => setStep('cpf')} style={{padding: 8}}><ArrowLeft color={theme.text} size={20} /></TouchableOpacity>
+        <Text style={styles.compactHeaderTitle}>Pagamento Pix</Text>
+        <View style={{width: 20}} />
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 20, alignItems: 'center' }}>
+        <View style={styles.timerContainer}>
+            <Clock size={14} color={theme.primary} />
+            <Text style={styles.timerText}>Aguardando confirmação...</Text>
+        </View>
+        <View style={styles.qrCodeBoxCompact}>
+          {pixData?.qrCodeBase64 ? (
+            <Image source={{ uri: `data:image/png;base64,${pixData.qrCodeBase64}` }} style={{ width: 180, height: 180 }} resizeMode="contain" />
+          ) : (
+            <ActivityIndicator size="large" color={theme.primary} />
+          )}
+        </View>
+        <View style={{width: '100%', marginBottom: 24}}>
+            <Text style={{fontSize: 14, fontWeight: '600', color: theme.text, marginBottom: 8}}>
+                Pix Copia e Cola
+            </Text>
+            <TouchableOpacity 
+                style={styles.ifoodPixContainer} 
+                onPress={handleCopyPix}
+                activeOpacity={0.7}
+            >
+                <Text style={styles.ifoodPixText} numberOfLines={1} ellipsizeMode="tail">
+                    {pixData?.copyPaste || "Carregando código..."}
+                </Text>
+                <View style={styles.ifoodCopyButton}>
+                    <Copy size={18} color={theme.primary} />
+                </View>
+            </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 
   return (
@@ -497,141 +435,124 @@ export default function PaywallModal({ visible, onClose }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.background, alignItems: 'center' },
   contentContainer: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH },
-  headerRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, marginTop: Platform.OS === 'android' ? 20 : 16, marginBottom: 10 },
-  closeIconHitbox: { padding: 8, backgroundColor: '#EDF2F7', borderRadius: 20 },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
   
-  heroContainer: { alignItems: 'center', marginBottom: 24, marginTop: 10 },
-  tagContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.orange, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 16, gap: 6 },
-  tagText: { color: '#FFF', fontWeight: 'bold', fontSize: 12 },
-  heroTitle: { fontSize: 26, fontWeight: '900', color: theme.darkBlue, textAlign: 'center', marginBottom: 10, lineHeight: 32 },
-  heroSubtitle: { fontSize: 16, color: theme.textSec, textAlign: 'center', paddingHorizontal: 10, lineHeight: 22 },
+  // --- LAYOUT ESTRUTURAL NOVO ---
+  mainLayout: { flex: 1, position: 'relative' },
   
-  featuresList: { marginBottom: 30, gap: 12, backgroundColor: theme.cardBg, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: theme.border, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  checkCircle: { width: 22, height: 22, borderRadius: 11, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
-  featureText: { fontSize: 15, color: theme.text, flex: 1 },
-  
-  planSelector: { gap: 16, marginBottom: 24 },
-  planCard: { backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 16, padding: 20, position: 'relative' },
-  planCardSelected: { borderColor: theme.primary, backgroundColor: '#F0FDF4', borderWidth: 2, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 4 },
-  popularBadge: { position: 'absolute', top: -12, right: 16, backgroundColor: theme.darkBlue, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, zIndex: 10 },
-  popularText: { fontSize: 10, fontWeight: 'bold', color: '#FFF' },
-  
-  planHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'flex-start' },
-  planName: { fontSize: 18, fontWeight: 'bold', color: theme.text },
-  planBestValue: { fontSize: 13, color: theme.primary, fontWeight: '600' },
-  
-  pricingContainer: { marginTop: 4 },
-  oldPrice: { textDecorationLine: 'line-through', color: theme.textSec, fontSize: 14, marginBottom: -4 },
-  currency: { fontSize: 16, fontWeight: 'bold', color: theme.text, marginBottom: 4 },
-  bigPrice: { fontSize: 32, fontWeight: '900', color: theme.text },
-  period: { fontSize: 16, color: theme.textSec, marginBottom: 4 },
-  
-  savingsBadge: { alignSelf: 'flex-start', backgroundColor: theme.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginTop: 12 },
-  savingsText: { color: '#FFF', fontSize: 11, fontWeight: 'bold' },
-  
-  planPriceSimple: { fontSize: 20, fontWeight: 'bold', color: theme.text, marginTop: 4 },
-  planNote: { fontSize: 13, color: theme.textSec, marginTop: 4 },
-  
-  radioUnselected: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: theme.border },
-  radioSelected: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: theme.primary, justifyContent: 'center', alignItems: 'center' },
-  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: theme.primary },
-  
-  ctaButton: { backgroundColor: theme.primary, borderRadius: 14, paddingVertical: 18, alignItems: 'center', marginBottom: 12, width: '100%', flexDirection: 'row', justifyContent: 'center', shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
-  ctaText: { color: '#FFF', fontSize: 16, fontWeight: 'bold', letterSpacing: 0.5 },
-  
-  guaranteeContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 },
-  guaranteeText: { color: theme.textSec, fontSize: 13, fontWeight: '500' },
-  
-  // Headers Internos
-  simpleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: theme.cardBg, borderBottomWidth: 1, borderBottomColor: theme.border },
-  simpleHeaderTitle: { color: theme.text, fontSize: 18, fontWeight: 'bold' },
-  backButton: { padding: 8 },
-  
-  centerContent: { padding: 24, flexGrow: 1 },
-  sectionTitle: { fontSize: 22, fontWeight: 'bold', color: theme.text, marginBottom: 24, textAlign: 'center' },
-  
-  // Metodos de Pagamento
-  methodCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.cardBg, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: theme.border, marginBottom: 12, gap: 16 },
-  methodCardSelected: { borderColor: theme.primary, backgroundColor: '#F0FDF4', borderWidth: 2 },
-  methodIconContainer: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' },
-  methodTitle: { fontSize: 16, fontWeight: 'bold', color: theme.text },
-  methodSubtitle: { fontSize: 13, color: theme.textSec, marginTop: 2 },
-  
-  // Inputs
-  progressSteps: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 30 },
-  stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.border },
-  stepActive: { backgroundColor: theme.primary, width: 24 },
-  
-  inputTitle: { fontSize: 20, fontWeight: 'bold', color: theme.text, marginBottom: 8 },
-  inputSubtitle: { fontSize: 15, color: theme.textSec, marginBottom: 24 },
-  inputLabel: { color: theme.text, fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  inputField: { backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, color: theme.text, padding: 16, borderRadius: 12, fontSize: 16, marginBottom: 16 },
-  
-  secureBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 24, backgroundColor: '#F0FDF4', padding: 10, borderRadius: 8 },
-  secureText: { fontSize: 12, color: theme.primary, fontWeight: '600' },
-  
-  // Pix Pagamento (Estilo iFood)
-  timerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFBEB', padding: 8, borderRadius: 8, gap: 6, marginBottom: 20, alignSelf: 'center' },
-  timerText: { color: theme.orange, fontWeight: 'bold', fontSize: 13 },
-  paymentInstructions: { color: theme.text, textAlign: 'center', fontSize: 16, marginBottom: 24, lineHeight: 22 },
-  
-  qrCodeBox: { padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: theme.border, marginBottom: 24, alignSelf: 'center', shadowColor: "#000", shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  
-  // Copia e Cola Estilo iFood
-  copyPasteContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  fixedHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    alignItems: 'flex-end',
+    backgroundColor: theme.background,
+    zIndex: 10,
+  },
+
+  fixedBottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: theme.cardBg,
-    borderRadius: 8,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 20,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+
+  // --- COMPONENTES ANTERIORES ---
+  closeIconHitbox: { padding: 6, backgroundColor: '#EDF2F7', borderRadius: 16 },
+  
+  // --- HERO SECTION ---
+  heroContainer: { alignItems: 'center', marginBottom: 24, marginTop: 4 },
+  tagContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.orange, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginBottom: 12, gap: 6 },
+  tagText: { color: '#FFF', fontWeight: '800', fontSize: 11, letterSpacing: 0.5 },
+  heroTitle: { fontSize: 26, fontWeight: '900', color: theme.darkBlue, textAlign: 'center', marginBottom: 8, lineHeight: 32 },
+  heroSubtitle: { fontSize: 15, color: theme.textSec, textAlign: 'center', paddingHorizontal: 10, lineHeight: 22 },
+  
+  // --- BENEFITS LIST ---
+  benefitsListContainer: {
+    width: '100%',
+    marginBottom: 20,
+    backgroundColor: theme.cardBg,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
     borderColor: theme.border,
-    padding: 4, // Padding interno pequeno
-    marginBottom: 24,
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  copyPasteTextContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  copyPasteLabel: {
-    fontSize: 12,
-    color: theme.textSec,
-    marginBottom: 2,
-  },
-  copyPasteCode: {
-    fontSize: 14,
-    color: theme.text,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', // Fonte monoespaçada para código
-  },
-  copyPasteButton: {
-    backgroundColor: theme.primary, // Vermelho iFood
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    gap: 6,
-  },
-  copyPasteButtonText: {
-    color: 'primary',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
+  benefitRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16, gap: 12 },
+  benefitIconBox: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primaryLight, justifyContent: 'center', alignItems: 'center', marginTop: 2 },
+  benefitTitle: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 2 },
+  benefitDesc: { fontSize: 13, color: theme.textSec, lineHeight: 18 },
 
-  infoBox: { backgroundColor: theme.background, padding: 16, borderRadius: 12 },
-  infoTitle: { fontWeight: 'bold', color: theme.text, marginBottom: 8 },
-  infoText: { color: theme.textSec, fontSize: 13, marginBottom: 4 },
+  // --- DIVIDER ---
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, paddingHorizontal: 10 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: theme.border },
+  dividerText: { fontSize: 12, fontWeight: '700', color: theme.textSec, marginHorizontal: 12, letterSpacing: 1 },
 
-  // Installment Styles
-  installmentContainer: { width: '100%', marginTop: 12, marginBottom: 12 },
-  installmentSelector: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 12, padding: 16 },
-  installmentSelectorText: { fontSize: 16, color: theme.text, fontWeight: '500' },
-  installmentDropdown: { marginTop: 8, backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 12, maxHeight: 200, overflow: 'hidden' },
-  installmentOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: theme.border },
-  installmentOptionSelected: { backgroundColor: '#F0FDF4' },
-  installmentText: { fontSize: 15, color: theme.text },
+  // --- PLANOS (AJUSTADOS PARA O FOOTER) ---
+  plansContainerCompact: { gap: 10, marginBottom: 16 },
+  planCardOld: { 
+    backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 12, 
+    paddingHorizontal: 16, paddingVertical: 12, position: 'relative' 
+  },
+  planCardSelectedOld: { borderColor: theme.primary, backgroundColor: '#F0FDF4', borderWidth: 2 },
+  planCardSelectedOldMonthly: { borderColor: theme.primary, backgroundColor: theme.cardBg, borderWidth: 2 },
+  popularBadgeOld: { position: 'absolute', top: -10, left: 16, backgroundColor: theme.black, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, zIndex: 10 },
+  popularTextOld: { color: theme.white, fontSize: 10, fontWeight: 'bold' },
+  planRowOld: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  planNameOldGreen: { fontSize: 16, fontWeight: 'bold', color: theme.primary }, 
+  planNameOldBlack: { fontSize: 16, fontWeight: 'bold', color: theme.text }, 
+  savingsTextOld: { fontSize: 11, fontWeight: 'bold', color: theme.primary, marginRight: 6 },
+  oldPriceOld: { textDecorationLine: 'line-through', color: theme.textSec, fontSize: 12 },
+  currencyOld: { fontSize: 14, fontWeight: '600', color: theme.text, marginRight: 2 },
+  bigPriceOld: { fontSize: 26, fontWeight: '900', color: theme.text },
+  periodOld: { fontSize: 13, color: theme.textSec, fontWeight: '400', marginLeft: 2 },
+  fullPriceTextOld: { fontSize: 11, color: theme.textSec, marginTop: 2 },
+  planNoteOld: { fontSize: 12, color: theme.textSec, marginTop: 2 },
   
-  secureHintContainer: { flexDirection: 'row', gap: 8, marginTop: 4, marginBottom: 20, justifyContent: 'center', alignItems: 'center' },
+  // --- FOOTER ELEMENTS ---
+  footerCompact: { paddingVertical: 0, alignItems: 'center', gap: 12 },
+  ctaButtonCompact: { backgroundColor: theme.primary, borderRadius: 14, paddingVertical: 16, width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  ctaTextCompact: { color: '#FFF', fontSize: 16, fontWeight: 'bold', letterSpacing: 0.5 },
+  guaranteeRowCompact: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  guaranteeTextCompact: { color: theme.textSec, fontSize: 12, fontWeight: '500' },
+
+  // --- OUTROS ESTILOS (MANTIDOS) ---
+  compactHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
+  compactHeaderTitle: { fontSize: 16, fontWeight: 'bold', color: theme.text },
+  
+  inputLabel: { color: theme.grayInput ,fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 6, marginTop: 12 },
+  inputFieldCompact: { backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, padding: 12, borderRadius: 10, fontSize: 15 },
+  
+  methodCard: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 12, marginBottom: 8, gap: 12 },
+  methodCardSelected: { borderColor: theme.primary, backgroundColor: '#F0FDF4' },
+  methodTitle: { fontSize: 14, fontWeight: '600', color: theme.text },
+  
+  installmentSelector: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 10 },
+  installmentSelectorText: { fontSize: 14 },
+  installmentDropdown: { marginTop: 4, backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 10, maxHeight: 150 },
+  installmentOption: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
+  installmentOptionSelected: { backgroundColor: '#F0FDF4' },
+  installmentText: { fontSize: 13 },
+
+  timerContainer: { flexDirection: 'row', gap: 6, backgroundColor: theme.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginBottom: 20 },
+  timerText: { fontSize: 12, color: theme.primary, fontWeight: 'bold' },
+  qrCodeBoxCompact: { padding: 10, backgroundColor: '#FFF', borderRadius: 12, borderWidth: 1, borderColor: theme.border, marginBottom: 24 },
+  ifoodPixContainer: { backgroundColor: theme.grayInput, borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: 'transparent' },
+  ifoodPixText: { fontSize: 14, color: theme.textSec, flex: 1, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', marginRight: 10 },
+  ifoodCopyButton: { paddingLeft: 8 },
 });
