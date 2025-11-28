@@ -10,15 +10,17 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
-  Modal, // Novo
-  TouchableWithoutFeedback // Novo
+  Modal, 
+  TouchableWithoutFeedback 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase, useAuth } from '../context/AuthContext';
-import { ArrowLeft, LogOut, User, Target, Award, ChevronDown } from 'lucide-react-native'; // Novos ícones
+import { ArrowLeft, LogOut, User, Target, Award, ChevronDown } from 'lucide-react-native';
 import { POINT_RULES } from '../utils/PointSystem';
 // Importa a função de salvar o foco
 import { updateUserCertificationFocus } from '../context/progressService'; 
+// Importa o Modal Anti-Churn
+import ChurnGuardModal from '../components/ChurnGuardModal';
 
 // --- PALETA DE CORES ---
 const cores = {
@@ -40,7 +42,7 @@ const AVAILABLE_CERTIFICATIONS = ['cpa', 'cpror', 'cproi'];
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
-  const { user } = useAuth(); 
+  const { user, isPro } = useAuth(); // Adicionado isPro
 
   const [name, setName] = useState(user?.user_metadata?.full_name || '');
   const [dailyGoalInput, setDailyGoalInput] = useState(
@@ -50,6 +52,7 @@ export default function SettingsScreen() {
   // --- NOVOS ESTADOS ---
   const [isSaving, setIsSaving] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false); // Estado para o modal de cancelamento
   const [currentFocus, setCurrentFocus] = useState(
     user?.user_metadata?.certification_focus || 'cpa'
   );
@@ -113,7 +116,7 @@ export default function SettingsScreen() {
     setIsSaving(false);
   };
 
-  // --- NOVA FUNÇÃO: Salvar Foco da Trilha ---
+  // Salvar Foco da Trilha
   const handleUpdateFocus = async (newCert) => {
     if (newCert === currentFocus) {
       setModalVisible(false);
@@ -179,7 +182,7 @@ export default function SettingsScreen() {
           </View>
         </View>
         
-        {/* --- NOVA SEÇÃO: Foco da Trilha --- */}
+        {/* --- Seção Foco da Trilha --- */}
         <Text style={styles.sectionTitle}>FOCO DA TRILHA</Text>
         <View style={styles.card}>
           <TouchableOpacity 
@@ -225,8 +228,41 @@ export default function SettingsScreen() {
               {'\n'}• Cases: <Text style={{fontWeight: 'bold'}}>{POINT_RULES.CASE_CORRECT} pts</Text> (correto), <Text style={{fontWeight: 'bold'}}>{POINT_RULES.CASE_PARTIAL} pts</Text> (parcial), <Text style={{fontWeight: 'bold'}}>{POINT_RULES.CASE_INCORRECT} pts</Text> (erro)
             </Text>
           </View>
-
         </View>
+
+        {/* --- NOVA SEÇÃO: ASSINATURA (Discreta e Legal) --- */}
+        {isPro && (
+          <>
+            <Text style={styles.sectionTitle}>ASSINATURA</Text>
+            <View style={styles.card}>
+              <View style={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: cores.textPrimary }}>
+                    Plano Ativo
+                  </Text>
+                  <View style={{ backgroundColor: cores.primaryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: cores.primary }}>
+                      PREMIUM
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ height: 1, backgroundColor: cores.border, marginVertical: 12 }} />
+
+                {/* Botão "Gerenciar" - Discreto e funcional */}
+                <TouchableOpacity 
+                  onPress={() => setShowCancelModal(true)}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}
+                >
+                  <Text style={{ fontSize: 15, color: cores.textPrimary }}>
+                    Gerenciar Assinatura
+                  </Text>
+                  <ChevronDown size={20} color={cores.textSecondary} style={{ transform: [{ rotate: '-90deg' }] }} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        )}
         
         {/* --- Botão Logout --- */}
         <Text style={styles.sectionTitle}>CONTA</Text>
@@ -238,7 +274,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* --- NOVO: Modal de Seleção de Foco --- */}
+      {/* --- Modal de Seleção de Foco --- */}
       <Modal
           transparent={true}
           visible={modalVisible}
@@ -269,6 +305,16 @@ export default function SettingsScreen() {
               </View>
           </TouchableWithoutFeedback>
       </Modal>
+
+      {/* --- Modal Anti-Churn (Gerenciamento de Assinatura) --- */}
+      <ChurnGuardModal 
+        visible={showCancelModal} 
+        onClose={() => setShowCancelModal(false)}
+        onCancelSuccess={() => {
+           // Opcional: Você pode forçar um refresh do user aqui se necessário
+           console.log("Assinatura cancelada pelo modal.");
+        }}
+      />
 
     </SafeAreaView>
   );
@@ -355,7 +401,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   
-  // --- NOVOS ESTILOS (Dropdown e Modal) ---
+  // --- Estilos Dropdown e Modal ---
   focusButton: {
     flexDirection: 'row',
     alignItems: 'center',
