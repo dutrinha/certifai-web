@@ -1,4 +1,4 @@
-// src/Screens/OnboardingFlowScreen.js (VERSÃO FINAL - CARROSSEL AUTOMÁTICO CORRIGIDO WEB/IOS/ANDROID)
+// src/Screens/OnboardingFlowScreen.js
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -14,7 +14,7 @@ import {
   TextInput,
   Platform,
   useWindowDimensions,
-  Easing, // Adicionado Easing para animação linear
+  Easing, 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -22,7 +22,7 @@ import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line, G, Text as SvgText
 import { 
   Sparkles, Check, Lock, Briefcase, TrendingUp, Brain, 
   Layers, ArrowLeft, Target, BarChart3, UserCheck, 
-  BookOpen, MessageSquare, Shield, X, User
+  BookOpen, MessageSquare, Shield, X, User, CheckCircle
 } from 'lucide-react-native';
 
 import { supabase, useAuth } from '../context/AuthContext'; 
@@ -49,7 +49,7 @@ const cores = {
   neonOrange: "000000"
 };
 
-const CONTENT_MAX_WIDTH = 500; // Largura máxima para inputs/botões no PC
+const CONTENT_MAX_WIDTH = 500; 
 
 // --- COMPONENTES INTERNOS ---
 
@@ -192,43 +192,32 @@ const FeatureCard = ({ icon: Icon, title, subtitle, width }) => (
   </View>
 );
 
-// --- AUTO CAROUSEL CORRIGIDO (VERSÃO FINAL ROBUSTA) ---
-// Substituímos FlatList por Animated.View com Transform. 
-// Isso funciona 100% na Web pois usa CSS Transform em vez de Scroll Engine.
 const AutoCarousel = () => {
   const { width: windowWidth } = useWindowDimensions();
-  // Usamos Animated.Value para controlar a posição X
   const scrollX = useRef(new Animated.Value(0)).current; 
   
-  // Cálculo de larguras
   const isDesktop = windowWidth > 768;
   const CARD_MARGIN = 16;
   const cardWidth = isDesktop ? 280 : (windowWidth - 80) * 0.85;
   const itemFullWidth = cardWidth + CARD_MARGIN;
   
-  // Largura total de UM conjunto (o ponto de reset da animação)
   const singleSetWidth = itemFullWidth * features.length;
 
   useEffect(() => {
-    // Função que inicia o loop infinito
     const startLoop = () => {
-      // Reseta para 0
       scrollX.setValue(0);
-      
-      // Cria a animação de 0 até -singleSetWidth
       Animated.loop(
         Animated.timing(scrollX, {
           toValue: -singleSetWidth,
-          duration: 30000, // 30 segundos para uma volta completa (ajuste a velocidade aqui)
-          easing: Easing.linear, // Movimento constante, sem aceleração
-          useNativeDriver: true, // Garante performance nativa e na Web
+          duration: 30000, 
+          easing: Easing.linear, 
+          useNativeDriver: true, 
         })
       ).start();
     };
 
     startLoop();
 
-    // Cleanup se desmontar (opcional, mas boa prática)
     return () => {
       scrollX.stopAnimation();
     };
@@ -236,20 +225,16 @@ const AutoCarousel = () => {
 
   return (
     <View style={styles.carouselWrapper}>
-      {/* Container com overflow hidden para mascarar os itens saindo da tela */}
       <View style={{ width: '100%', overflow: 'hidden' }}>
-        
-        {/* A View que efetivamente se move */}
         <Animated.View
           style={{
             flexDirection: 'row',
-            width: singleSetWidth * 2, // Garante que cabe tudo numa linha
-            transform: [{ translateX: scrollX }], // O motor da animação
-            paddingLeft: 16, // Espaço inicial visual
+            width: singleSetWidth * 2, 
+            transform: [{ translateX: scrollX }], 
+            paddingLeft: 16, 
           }}
         >
           {duplicatedFeatures.map((item, index) => (
-            // Adicionamos uma View wrapper para garantir o espaçamento (gap/margin)
             <View key={`${item.title}-${index}`} style={{ marginRight: CARD_MARGIN }}>
               <FeatureCard 
                 icon={item.icon} 
@@ -260,7 +245,6 @@ const AutoCarousel = () => {
             </View>
           ))}
         </Animated.View>
-
       </View>
     </View>
   );
@@ -272,17 +256,38 @@ const AutoCarousel = () => {
 export default function OnboardingFlowScreen() {
   const navigation = useNavigation();
   const { onboardingData, updateData } = useOnboarding();
-  const { user, isPro } = useAuth(); 
+  const { user, isPro, loading: authLoading } = useAuth(); 
 
-  // Começa no passo 8 (Paywall) se já tiver usuário real
-  const initialStep = (user && !user.is_anonymous) ? 8 : 1;
+  // Determina se o usuário já existe para começar no passo final
+  const isUserReal = user && !user.is_anonymous;
+  const initialStep = isUserReal ? 8 : 1;
   const [step, setStep] = useState(initialStep);
   
+  // --- ESTADOS DO PASSO 8 (LOADING E PAYWALL) ---
+  // Se começou no passo 8, já começa "construindo". Se não, começa "idle".
+  const [planBuildingStatus, setPlanBuildingStatus] = useState(initialStep === 8 ? 'building' : 'idle');
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // Campos dos passos anteriores
   const [motivation, setMotivation] = useState(null);
   const [certification, setCertification] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
   const [name, setName] = useState('');
+
+  // --- EFEITO: SIMULAÇÃO DE "MONTANDO PLANO" ---
+  useEffect(() => {
+    // Só ativa quando chegar no passo 8
+    if (step === 8) {
+      setPlanBuildingStatus('building'); // Força estado de carregamento
+      
+      const timer = setTimeout(() => {
+        setPlanBuildingStatus('ready'); // Libera o botão "Acessar"
+      }, 3000); // 3 segundos de loading falso
+      
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   const nextStep = (data = {}) => {
     if (Object.keys(data).length > 0) updateData(data);
@@ -414,13 +419,14 @@ export default function OnboardingFlowScreen() {
           <View style={[styles.stepContainer, { alignItems: 'stretch' }]}>
             <LoginAuth 
               onLoginSuccess={() => {
-                console.log("Onboarding: Login com sucesso! Avançando para o Paywall.");
-                nextStep(); 
+                console.log("Onboarding: Login com sucesso! Avançando para a montagem do plano.");
+                nextStep(); // Vai para o passo 8
               }}
             />
           </View>
         );
 
+      // ☆ PASSO 8: MONTANDO PLANO -> PRONTO -> PAYWALL/ACESSO
       case 8:
         const handleCompleteOnboarding = async () => {
           try {
@@ -435,34 +441,71 @@ export default function OnboardingFlowScreen() {
           }
         };
 
+        // 1. Evita flash se ainda estiver carregando o user
+        if (authLoading) {
+             return (
+               <View style={styles.stepContainer}>
+                 <ActivityIndicator size="large" color={cores.primary} />
+                 <Text style={{marginTop: 16, color: cores.gray500}}>Sincronizando conta...</Text>
+               </View>
+             );
+        }
+
+        // 2. Tela de "Montando Plano" (3 segundos)
+        if (planBuildingStatus === 'building') {
+             return (
+               <View style={styles.stepContainer}>
+                 <ActivityIndicator size="large" color={cores.primary} />
+                 <Text style={[styles.title, {marginTop: 24, fontSize: 22}]}>
+                    Montando seu plano de estudos personalizado...
+                 </Text>
+                 <Text style={styles.subtitle}>
+                    Analisando suas respostas e calibrando a IA.
+                 </Text>
+               </View>
+             );
+        }
+
+        // 3. Tela de "Plano Pronto" (Sucesso)
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>
-              {isPro ? "Tudo pronto! 🚀" : "Finalizando..."}
-            </Text>
-            <Text style={styles.subtitle}>
-              {isPro 
-                ? "Sua assinatura Premium está ativa. Aproveite!" 
-                : "Estamos preparando seu ambiente de estudos..."}
-            </Text>
+            <View style={{alignItems: 'center', marginBottom: 40}}>
+                <View style={{
+                    width: 100, height: 100, borderRadius: 50, 
+                    backgroundColor: cores.primaryLight, 
+                    justifyContent: 'center', alignItems: 'center',
+                    marginBottom: 24
+                }}>
+                    <CheckCircle size={50} color={cores.primary} />
+                </View>
+                <Text style={styles.title}>Seu plano está pronto!</Text>
+                <Text style={styles.subtitle}>
+                    Tudo configurado para você conquistar sua aprovação na {onboardingData.certification ? onboardingData.certification.toUpperCase() : 'certificação'}.
+                </Text>
+            </View>
             
-            {/* Se for PRO, mostra botão de entrar direto */}
-            {isPro && (
-                <TouchableOpacity 
-                  style={[styles.button, {backgroundColor: cores.primary}]} 
-                  onPress={handleCompleteOnboarding}
-                >
-                  <Check size={18} color={cores.light} />
-                  <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar o App</Text>
-                </TouchableOpacity>
-            )}
+            {/* Botão ACESSAR - Gatilho do Paywall */}
+            <TouchableOpacity 
+              style={[styles.button, {backgroundColor: cores.primary}]} 
+              onPress={() => {
+                  if (isPro) {
+                      // Se for PRO, entra direto
+                      handleCompleteOnboarding(); 
+                  } else {
+                      // Se for FREE, mostra o Paywall
+                      setShowPaywall(true); 
+                  }
+              }}
+            >
+              <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar Plano</Text>
+            </TouchableOpacity>
 
-            {!isPro && (
-               <PaywallModal 
-                 visible={true} 
-                 onClose={handleCompleteOnboarding} 
-               />
-            )}
+            {/* Modal de Paywall */}
+            {/* onClose chama handleCompleteOnboarding, ou seja, ao fechar o Paywall, vai pra Home */}
+            <PaywallModal 
+              visible={showPaywall} 
+              onClose={handleCompleteOnboarding} 
+            />
           </View>
         );
         
@@ -476,6 +519,9 @@ export default function OnboardingFlowScreen() {
   };
 
   const renderFooterButton = () => {
+    // Esconde o botão padrão do footer nos passos 7 (Login) e 8 (Final)
+    if (step === 7 || step === 8) return null;
+
     switch (step) {
       case 1:
         return (
@@ -523,12 +569,6 @@ export default function OnboardingFlowScreen() {
             <Text style={styles.buttonText}>Continuar</Text>
           </TouchableOpacity>
         );
-
-      case 7:
-        return null; // O LoginAuth tem seus próprios botões
-
-      case 8:
-        return null; // O Paywall (Modal) ou o botão PRO controlam o fluxo
         
       default:
         return null;
@@ -552,9 +592,7 @@ export default function OnboardingFlowScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: cores.light },
-  // ADDED: alignItems center for desktop responsiveness
   scrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 24, alignItems: 'center' },
-  // MODIFIED: maxWidth and alignSelf to prevent stretching on desktop
   stepContainer: { 
     justifyContent: 'center', 
     alignItems: 'center', 
