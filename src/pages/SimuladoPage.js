@@ -12,10 +12,11 @@ import {
   Platform,
   KeyboardAvoidingView,
   Alert,
-  BackHandler // ☆ Importando BackHandler
+  BackHandler, // Importando BackHandler
+  TouchableWithoutFeedback // Para fechar modal ao clicar fora
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { X, Check, Sparkles, Send } from 'lucide-react-native';
+import { X, Check, Sparkles, Send, AlertTriangle } from 'lucide-react-native'; // Adicionei AlertTriangle
 import { supabase, useAuth } from '../context/AuthContext';
 import PremiumGuard from '../components/PremiumGuard';
 
@@ -26,7 +27,6 @@ import {
 
 import { markLessonAsCompleted } from '../context/progressService';
 
-// ... (Cores e Componente AiMessageRenderer mantidos)
 const cores = {
   primary: '#00C853',
   secondary: '#1A202C',
@@ -99,21 +99,35 @@ export default function SimuladoPage() {
   const [userAnswers, setUserAnswers] = useState({});
   const typingIntervalRef = useRef(null);
 
-  // ☆ EFEITO DE PROTEÇÃO DE VOLTAR (NOVO) ☆
+  // NOVO: Estado para o modal de saída
+  const [isExitModalVisible, setIsExitModalVisible] = useState(false);
+
+  // --- CORREÇÃO DO BACKHANDLER E SAÍDA ---
+  const handleExitSimulado = () => {
+    if (isRunnerMode) {
+      // Abre o modal personalizado em vez do Alert nativo
+      setIsExitModalVisible(true);
+    } else {
+      navigation.goBack();
+    }
+  };
+
+  const confirmExitSimulado = () => {
+    setIsExitModalVisible(false);
+    if (navigation.canGoBack()) {
+        // Volta para a configuração ou tela anterior
+        navigation.popToTop(); 
+    } else {
+        navigation.replace('Tabs'); // Fallback para a Home
+    }
+  };
+
   useEffect(() => {
-    // Só ativamos o bloqueio se for modo "Runner" (Simulado Completo)
-    // pois o usuário pode perder muito progresso.
+    // Só ativamos o bloqueio se for modo "Runner"
     if (!isRunnerMode) return;
 
     const onBackPress = () => {
-      Alert.alert(
-        'Sair do Simulado?',
-        'Se você sair agora, perderá todo o progresso deste simulado.',
-        [
-          { text: 'Continuar Fazendo', style: 'cancel', onPress: () => {} },
-          { text: 'Sair', style: 'destructive', onPress: () => navigation.popToTop() }, 
-        ]
-      );
+      handleExitSimulado();
       return true; // Impede o comportamento padrão (sair)
     };
 
@@ -122,7 +136,6 @@ export default function SimuladoPage() {
     return () => backHandler.remove();
   }, [isRunnerMode, navigation]);
 
-  // ... (Resto da Lógica de Typing e Fetch mantida IGUAL) ...
   useEffect(() => {
     return () => {
       if (typingIntervalRef.current) {
@@ -236,7 +249,6 @@ export default function SimuladoPage() {
     return selectedOption === questions[currentQuestionIndex].answer;
   };
 
-  // --- Lógica de Navegação (Mantida igual) ---
   const handleNextQuestion = async () => { 
     if (isRunnerMode) {
       const isCorrect = isCorrectAnswer();
@@ -360,7 +372,6 @@ export default function SimuladoPage() {
     getAiCorrection(newHistory);
   };
 
-  // --- Telas de Loading/Erro (mantidas) ---
   if (loading) {
     return (
       <View style={styles.centeredScreen}>
@@ -394,7 +405,6 @@ export default function SimuladoPage() {
     );
   }
 
-  // --- Renderização Principal (mantida igual) ---
   const currentQuestion = questions[currentQuestionIndex];
   let progressPercentage = 0;
   let progressText = '';
@@ -421,21 +431,8 @@ export default function SimuladoPage() {
               <Text style={styles.headerTitle} numberOfLines={1}>
                 {headerTitle}
               </Text>
-              <TouchableOpacity onPress={() => {
-                  if (isRunnerMode) {
-                      // Alerta manual se clicar no X
-                      Alert.alert(
-                        'Sair do Simulado?',
-                        'Se você sair agora, perderá todo o progresso deste simulado.',
-                        [
-                          { text: 'Continuar Fazendo', style: 'cancel' },
-                          { text: 'Sair', style: 'destructive', onPress: () => navigation.popToTop() }, 
-                        ]
-                      );
-                  } else {
-                      navigation.goBack();
-                  }
-              }} style={styles.closeButton}>
+              {/* Botão de Saída */}
+              <TouchableOpacity onPress={handleExitSimulado} style={styles.closeButton}>
                 <X size={24} color={cores.secondary} />
               </TouchableOpacity>
             </View>
@@ -556,6 +553,7 @@ export default function SimuladoPage() {
         </View>
       </View>
       
+      {/* MODAL DE CHAT IA (Bottom Sheet) */}
       <Modal animationType="slide" transparent={true} visible={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalBackdrop}>
           <View style={styles.modalContainer}>
@@ -616,11 +614,47 @@ export default function SimuladoPage() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* NOVO MODAL DE CONFIRMAÇÃO DE SAÍDA (Estilo Dialog) */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isExitModalVisible}
+        onRequestClose={() => setIsExitModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setIsExitModalVisible(false)}>
+          <View style={styles.alertModalBackdrop}>
+            <View style={styles.alertModalContainer}>
+                <View style={{alignItems: 'center', marginBottom: 16}}>
+                    <AlertTriangle size={32} color={cores.red500} />
+                </View>
+                <Text style={styles.alertModalTitle}>Sair do Simulado?</Text>
+                <Text style={styles.alertModalDescription}>
+                    Se você sair agora, perderá todo o progresso deste simulado.
+                </Text>
+                <View style={styles.alertModalButtons}>
+                    <TouchableOpacity
+                        style={[styles.secondaryButton, { flex: 1, backgroundColor: cores.gray200, borderWidth: 0 }]}
+                        onPress={() => setIsExitModalVisible(false)}
+                    >
+                        <Text style={[styles.primaryButtonText, { color: cores.secondary, fontWeight: '600' }]}>Continuar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.primaryButton, { flex: 1, backgroundColor: cores.red500 }]}
+                        onPress={confirmExitSimulado}
+                    >
+                        <Text style={styles.primaryButtonText}>Sair</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
     </SafeAreaView>
   );
 }
 
-// Estilos (Mantidos, pode copiar do original)
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: cores.softGray, paddingTop: Platform.OS === 'android' ? 25 : 0 },
   container: { flex: 1 },
@@ -698,4 +732,43 @@ const styles = StyleSheet.create({
   difficultyMedium: { backgroundColor: '#FEF9C3' },
   difficultyHard: { backgroundColor: '#FEE2E2' },
   difficultyText: { fontSize: 12, fontWeight: 'bold', color: cores.secondary },
+
+  // Estilos do Modal de Alerta
+  alertModalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 24,
+  },
+  alertModalContainer: {
+    backgroundColor: cores.light,
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  alertModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: cores.secondary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  alertModalDescription: {
+    fontSize: 16,
+    color: cores.gray500,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  alertModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
 });
