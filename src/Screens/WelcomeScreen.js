@@ -148,7 +148,7 @@ export default function WelcomeScreen() {
               </View>
 
               <Text style={{ fontSize: titleFontSize, fontWeight: '800', color: cores.secondary, lineHeight: titleLineHeight, marginBottom: 24, letterSpacing: -1 }}>
-                Sua certificação financeira <Text style={{ color: cores.primary }}>garantida.</Text>
+                Atualizado para o novo mercado. Preparado para o <Text style={{ color: cores.primary }}>seu futuro.</Text>
               </Text>
 
               <Text style={{ fontSize: isSmallDesktop ? 16 : 20, color: cores.gray500, marginBottom: 40, lineHeight: 28, maxWidth: 550 }}>
@@ -250,7 +250,7 @@ export default function WelcomeScreen() {
           </View>
 
           <Text style={{ fontSize: 36, fontWeight: '800', color: cores.secondary, lineHeight: 42, marginBottom: 16, letterSpacing: -0.5 }}>
-            Sua certificação <Text style={{ color: cores.primary }}>garantida.</Text>
+                Atualizado para o novo mercado. Preparado para o <Text style={{ color: cores.primary }}>seu futuro.</Text>
           </Text>
 
           <Text style={{ fontSize: 16, color: cores.gray500, marginBottom: 24, lineHeight: 24 }}>
