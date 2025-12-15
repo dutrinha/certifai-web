@@ -16,6 +16,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../context/AuthContext';
 import { X, Check, Sparkles, Send, ArrowLeft } from 'lucide-react-native';
+import PremiumGuard from '../components/PremiumGuard'; // <--- Importando o Guardião Premium
 
 const cores = {
   primary: '#00C853',
@@ -134,10 +135,14 @@ const QuestionReviewCard = ({ question, onAskAI }) => {
 
       {question_type === 'mc' ? renderMCOptions() : renderCaseAnswers()}
 
-      <TouchableOpacity style={styles.aiButton} onPress={() => onAskAI(question)}>
-        <Sparkles size={20} color={cores.primary} />
-        <Text style={styles.aiButtonText}>Perguntar à IA sobre esta questão</Text>
-      </TouchableOpacity>
+      {/* --- BOTÃO AGORA PROTEGIDO PELO PREMIUM GUARD --- */}
+      <PremiumGuard onPress={() => onAskAI(question)}>
+        <View style={styles.aiButton}>
+          <Sparkles size={20} color={cores.primary} />
+          <Text style={styles.aiButtonText}>Perguntar à IA sobre esta questão</Text>
+        </View>
+      </PremiumGuard>
+      
     </View>
   );
 };
