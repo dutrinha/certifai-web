@@ -129,7 +129,7 @@ export default function WelcomeScreen() {
               <Text style={{ fontSize: 24, fontWeight: 'bold', color: cores.secondary }}>CertifAI</Text>
             </View>
             <TouchableOpacity onPress={handleLogin} style={{ paddingHorizontal: 24, paddingVertical: 12 }}>
-              <Text style={{ color: cores.secondary, fontWeight: '600', fontSize: 16 }}>Entrar</Text>
+              <Text style={{ color: cores.secondary, fontWeight: '600', fontSize: 16 }}>Já tenho conta</Text>
             </TouchableOpacity>
           </View>
 
@@ -239,7 +239,7 @@ export default function WelcomeScreen() {
           <Text style={{ fontSize: 20, fontWeight: 'bold', color: cores.secondary }}>CertifAI</Text>
         </View>
         <TouchableOpacity onPress={handleLogin} style={{ padding: 8 }}>
-          <Text style={{ color: cores.secondary, fontWeight: '600', fontSize: 14 }}>Entrar</Text>
+          <Text style={{ color: cores.secondary, fontWeight: '600', fontSize: 14 }}>Já tenho conta</Text>
         </TouchableOpacity>
       </View>
 
