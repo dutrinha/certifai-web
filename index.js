@@ -10,6 +10,7 @@ import { Platform } from 'react-native';
 
 if (Platform.OS === 'web') {
     document.title = 'CertifAI';
+    document.documentElement.lang = 'pt-BR'
 }
 
 registerRootComponent(App);
