@@ -59,11 +59,18 @@ const MagicSyncComponent = () => {
 const OnboardingStack = createNativeStackNavigator();
 
 export default function OnboardingNavigator() {
+  const { user } = useAuth();
+
   return (
     <>
       <MagicSyncComponent />
       
-      <OnboardingStack.Navigator screenOptions={{ headerShown: false }}>
+      <OnboardingStack.Navigator 
+        screenOptions={{ headerShown: false }}
+        // Se já tem usuário (voltou do login Google), vai direto pro fim.
+        // Se não tem (abriu o app agora), começa do início.
+        initialRouteName={user ? "OnboardingFlow" : "Welcome"}
+      >
         {/* Etapa 1: Pedir o nome e certificação (Feito) */}
         <OnboardingStack.Screen 
           name="Welcome" 
