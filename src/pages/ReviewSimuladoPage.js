@@ -1,5 +1,3 @@
-// certifai-mvp/src/pages/ReviewSimuladoPage.js
-// (VERSÃO PADRONIZADA COM SIMULADO PAGE - UI/UX)
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -19,7 +17,6 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../context/AuthContext';
 import { X, Check, Sparkles, Send, ArrowLeft } from 'lucide-react-native';
 
-// Cores (Idênticas ao SimuladoPage)
 const cores = {
   primary: '#00C853',
   secondary: '#1A202C',
@@ -38,7 +35,6 @@ const cores = {
   greenBorder: '#B3EBC6',
 };
 
-// Componente para renderizar o texto da IA (Padronizado)
 const AiMessageRenderer = ({ text }) => {
   if (!text) return null;
   const parts = text.split('**');
@@ -51,7 +47,6 @@ const AiMessageRenderer = ({ text }) => {
   );
 };
 
-// --- COMPONENTE CARD DE QUESTÃO ---
 const QuestionReviewCard = ({ question, onAskAI }) => {
   const { 
     question_context, 
@@ -147,7 +142,6 @@ const QuestionReviewCard = ({ question, onAskAI }) => {
   );
 };
 
-// --- PÁGINA PRINCIPAL ---
 export default function ReviewSimuladoPage() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -157,21 +151,27 @@ export default function ReviewSimuladoPage() {
   const [error, setError] = useState(null);
   const [answers, setAnswers] = useState([]); 
   
-  // Estados do Modal de IA
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isAiReplying, setIsAiReplying] = useState(false);
   const [currentAIQuestion, setCurrentAIQuestion] = useState(null);
   
-  // Ref para animação de digitação (Igual ao SimuladoPage)
   const typingIntervalRef = useRef(null);
 
+  // --- FUNÇÃO DE LIMPEZA DE DIGITAÇÃO ---
+  const stopTyping = () => {
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+      typingIntervalRef.current = null;
+    }
+    setIsAiReplying(false);
+  };
+
+  // Limpeza ao desmontar componente
   useEffect(() => {
     return () => {
-      if (typingIntervalRef.current) {
-        clearInterval(typingIntervalRef.current);
-      }
+      stopTyping();
     };
   }, []);
 
@@ -203,10 +203,13 @@ export default function ReviewSimuladoPage() {
     fetchReviewData();
   }, [sessionId]);
 
-  // --- LÓGICA DE DIGITAÇÃO (Igual ao SimuladoPage) ---
   const simulateTyping = (fullText) => {
     const words = fullText.split(' ');
     let wordIndex = 0;
+    
+    // Garante que não há intervalo anterior rodando
+    if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+
     typingIntervalRef.current = setInterval(() => {
       if (wordIndex < words.length) {
         const textToShow = words.slice(0, wordIndex + 1).join(' ');
@@ -218,14 +221,14 @@ export default function ReviewSimuladoPage() {
         });
         wordIndex++;
       } else {
-        clearInterval(typingIntervalRef.current);
-        setIsAiReplying(false);
+        stopTyping();
       }
-    }, 50); // Velocidade da digitação
+    }, 50);
   };
 
-  // --- Funções do Chat IA ---
   const openAiChat = (question) => {
+    stopTyping(); // Limpa animações anteriores ao abrir nova conversa
+    
     setCurrentAIQuestion(question); 
     
     let hiddenPrompt = "";
@@ -257,8 +260,6 @@ Pode me dar um coaching mais detalhado sobre o que eu poderia ter feito melhor?`
   
   const getAiReviewChat = async (currentHistory, questionContext) => {
     setIsAiReplying(true);
-    
-    // Adiciona o balão vazio da IA para começar a animação depois
     setChatHistory((prev) => [...prev, { role: "ai", text: '' }]);
 
     const requestBody = {
@@ -272,8 +273,6 @@ Pode me dar um coaching mais detalhado sobre o que eu poderia ter feito melhor?`
       });
 
       if (error) throw error;
-      
-      // Usa simulateTyping em vez de setar direto
       const aiResponseText = data.text; 
       simulateTyping(aiResponseText);
 
@@ -289,6 +288,8 @@ Pode me dar um coaching mais detalhado sobre o que eu poderia ter feito melhor?`
   
   const handleSendMessage = () => {
     if (!chatInput.trim() || isAiReplying || !currentAIQuestion) return;
+    stopTyping(); // Prevenção extra
+    
     const newUserMessage = { role: 'user', text: chatInput };
     const newHistory = [...chatHistory, newUserMessage];
     setChatHistory(newHistory);
@@ -326,8 +327,16 @@ Pode me dar um coaching mais detalhado sobre o que eu poderia ter feito melhor?`
         />
       </View>
       
-      {/* Modal de IA (Estrutura e Estilos IDÊNTICOS ao SimuladoPage) */}
-      <Modal animationType="slide" transparent={true} visible={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
+      {/* Modal de IA */}
+      <Modal 
+        animationType="slide" 
+        transparent={true} 
+        visible={isModalOpen} 
+        onRequestClose={() => {
+          stopTyping(); // Limpa animação ao fechar via hardware back
+          setIsModalOpen(false);
+        }}
+      >
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalBackdrop}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
@@ -335,7 +344,13 @@ Pode me dar um coaching mais detalhado sobre o que eu poderia ter feito melhor?`
                  <Sparkles size={20} color={cores.primary} />
                  <Text style={styles.headerTitle}>Correção com CertifAI</Text>
               </View>
-              <TouchableOpacity onPress={() => setIsModalOpen(false)} style={styles.closeButton}>
+              <TouchableOpacity 
+                onPress={() => {
+                  stopTyping(); // Limpa animação ao fechar via botão X
+                  setIsModalOpen(false);
+                }} 
+                style={styles.closeButton}
+              >
                 <X size={20} color={cores.secondary} />
               </TouchableOpacity>
             </View>
@@ -387,12 +402,9 @@ Pode me dar um coaching mais detalhado sobre o que eu poderia ter feito melhor?`
   );
 }
 
-// Estilos (Padronizados com SimuladoPage)
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: cores.softGray, paddingTop: Platform.OS === 'android' ? 25 : 0 },
   container: { flex: 1 },
-  
-  // Header
   header: { 
     backgroundColor: cores.light, 
     paddingHorizontal: 16, 
@@ -409,7 +421,6 @@ const styles = StyleSheet.create({
   
   mainContent: { flex: 1, paddingHorizontal: 16 },
 
-  // Card da Questão
   questionCard: {
     backgroundColor: cores.light,
     borderRadius: 12,
@@ -422,7 +433,6 @@ const styles = StyleSheet.create({
   contextText: { fontSize: 15, color: cores.gray700, lineHeight: 22, marginBottom: 16 },
   mainQuestionText: { fontSize: 16, fontWeight: '600', color: cores.secondary, lineHeight: 20 },
   
-  // Explicação
   explanationBox: {
     borderTopWidth: 1,
     borderBottomWidth: 1,
@@ -439,7 +449,6 @@ const styles = StyleSheet.create({
   explanationHeaderTextIncorrect: { color: cores.red600 },
   explanationText: { padding: 16, fontSize: 15, color: cores.secondary, lineHeight: 22 },
   
-  // Alternativas
   optionsContainer: { gap: 12, padding: 16 },
   optionBtn: { 
     flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderWidth: 2, 
@@ -451,7 +460,6 @@ const styles = StyleSheet.create({
   optionKey: { fontSize: 16, fontWeight: 'bold', color: cores.secondary },
   optionValue: { flex: 1, fontSize: 14, fontWeight: '600', color: cores.secondary },
   
-  // Case
   caseContainer: { padding: 16, gap: 8 },
   caseLabel: { fontSize: 13, fontWeight: '600', color: cores.gray500, paddingLeft: 4 },
   caseBox: { borderRadius: 8, padding: 12, borderWidth: 1 },
@@ -459,20 +467,17 @@ const styles = StyleSheet.create({
   caseIdeal: { backgroundColor: cores.green50, borderColor: cores.greenBorder },
   caseText: { fontSize: 14, color: cores.secondary, lineHeight: 20 },
 
-  // Botão AI
   aiButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12,
     backgroundColor: cores.softGray, borderTopWidth: 1, borderTopColor: cores.gray200,
   },
   aiButtonText: { color: cores.primary, fontWeight: '600', fontSize: 15 },
   
-  // Erro e Loading
   centeredScreen: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: cores.softGray },
   errorText: { fontSize: 18, fontWeight: 'bold', color: '#D32F2F', textAlign: 'center' },
   primaryButton: { backgroundColor: cores.primary, paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   primaryButtonText: { color: cores.light, fontSize: 16, fontWeight: 'bold' },
 
-  // --- ESTILOS DO MODAL (IDÊNTICOS AO SIMULADO) ---
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
   modalContainer: { height: '85%', backgroundColor: cores.softGray, borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden' },
   modalHeader: { padding: 16, borderBottomWidth: 1, borderColor: cores.gray200, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: cores.light },
@@ -481,7 +486,6 @@ const styles = StyleSheet.create({
   modalContextQuestion: { fontSize: 14, color: cores.secondary },
   chatScrollView: { flex: 1, padding: 16, backgroundColor: cores.softGray },
   
-  // Balões de Chat (Estilo Padronizado)
   userMessage: { 
     alignSelf: 'flex-end', 
     backgroundColor: cores.primary, 
@@ -507,7 +511,6 @@ const styles = StyleSheet.create({
   },
   aiMessageText: { color: cores.secondary, fontSize: 14, lineHeight: 20, textAlign: 'left' },
   
-  // Input (Estilo Padronizado)
   chatInputContainer: { 
     flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: 12, marginBottom: Platform.OS === 'ios' ? 24 : 12,
     paddingVertical: 8, paddingHorizontal: 12, backgroundColor: cores.light, borderRadius: 30, borderWidth: 1,
