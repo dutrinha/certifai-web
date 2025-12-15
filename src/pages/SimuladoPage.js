@@ -12,11 +12,11 @@ import {
   Platform,
   KeyboardAvoidingView,
   Alert,
-  BackHandler, // Importando BackHandler
-  TouchableWithoutFeedback // Para fechar modal ao clicar fora
+  BackHandler,
+  TouchableWithoutFeedback
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { X, Check, Sparkles, Send, AlertTriangle } from 'lucide-react-native'; // Adicionei AlertTriangle
+import { X, Check, Sparkles, Send, AlertTriangle } from 'lucide-react-native';
 import { supabase, useAuth } from '../context/AuthContext';
 import PremiumGuard from '../components/PremiumGuard';
 
@@ -92,20 +92,29 @@ export default function SimuladoPage() {
   const [isVerified, setIsVerified] = useState(false);
   const [userScore, setUserScore] = useState(0); 
   const [eliminatedOptions, setEliminatedOptions] = useState([]);
+  
+  // Estados do Chat IA
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isAiReplying, setIsAiReplying] = useState(false);
-  const [userAnswers, setUserAnswers] = useState({});
   const typingIntervalRef = useRef(null);
 
-  // NOVO: Estado para o modal de saída
+  const [userAnswers, setUserAnswers] = useState({});
   const [isExitModalVisible, setIsExitModalVisible] = useState(false);
 
-  // --- CORREÇÃO DO BACKHANDLER E SAÍDA ---
+  // --- FUNÇÃO DE LIMPEZA DE DIGITAÇÃO ---
+  const stopTyping = () => {
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+      typingIntervalRef.current = null;
+    }
+    setIsAiReplying(false);
+  };
+
+  // --- GERENCIAMENTO DE SAÍDA ---
   const handleExitSimulado = () => {
     if (isRunnerMode) {
-      // Abre o modal personalizado em vez do Alert nativo
       setIsExitModalVisible(true);
     } else {
       navigation.goBack();
@@ -115,20 +124,18 @@ export default function SimuladoPage() {
   const confirmExitSimulado = () => {
     setIsExitModalVisible(false);
     if (navigation.canGoBack()) {
-        // Volta para a configuração ou tela anterior
         navigation.popToTop(); 
     } else {
-        navigation.replace('Tabs'); // Fallback para a Home
+        navigation.replace('Tabs'); 
     }
   };
 
   useEffect(() => {
-    // Só ativamos o bloqueio se for modo "Runner"
     if (!isRunnerMode) return;
 
     const onBackPress = () => {
       handleExitSimulado();
-      return true; // Impede o comportamento padrão (sair)
+      return true;
     };
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -136,17 +143,20 @@ export default function SimuladoPage() {
     return () => backHandler.remove();
   }, [isRunnerMode, navigation]);
 
+  // Limpeza ao desmontar componente
   useEffect(() => {
     return () => {
-      if (typingIntervalRef.current) {
-        clearInterval(typingIntervalRef.current);
-      }
+      stopTyping();
     };
   }, []);
 
   const simulateTyping = (fullText) => {
     const words = fullText.split(' ');
     let wordIndex = 0;
+    
+    // Garante que não há intervalo anterior rodando
+    if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+
     typingIntervalRef.current = setInterval(() => {
       if (wordIndex < words.length) {
         const textToShow = words.slice(0, wordIndex + 1).join(' ');
@@ -158,12 +168,12 @@ export default function SimuladoPage() {
         });
         wordIndex++;
       } else {
-        clearInterval(typingIntervalRef.current);
-        setIsAiReplying(false);
+        stopTyping();
       }
     }, 50);
   };
 
+  // --- CARREGAMENTO DE DADOS ---
   useEffect(() => {
     if (isRunnerMode) {
       if (mcQuestionData) {
@@ -250,6 +260,9 @@ export default function SimuladoPage() {
   };
 
   const handleNextQuestion = async () => { 
+    // Garante que o chat pare se o usuário avançar
+    stopTyping();
+
     if (isRunnerMode) {
       const isCorrect = isCorrectAnswer();
       const updatedResults = { ...runnerContext.results };
@@ -327,12 +340,17 @@ export default function SimuladoPage() {
     );
   };
   
+  // --- CHAT IA ---
   const openAiChat = () => {
+    stopTyping(); // Limpa animações anteriores
+    
     const currentQuestion = questions[currentQuestionIndex];
     const userAnswer = currentQuestion.options[selectedOption];
     const isCorrect = selectedOption === currentQuestion.answer;
+    
     const hiddenPrompt = `Eu respondi "${userAnswer}". ${isCorrect ? "Eu acertei, mas" : "Eu errei, e"} gostaria de uma explicação detalhada.`;
     const hiddenHistory = [{ role: "user", text: hiddenPrompt }];
+    
     setChatHistory([]);
     setIsModalOpen(true);
     getAiCorrection(hiddenHistory);
@@ -341,10 +359,12 @@ export default function SimuladoPage() {
   const getAiCorrection = async (currentHistory) => {
     setIsAiReplying(true);
     setChatHistory((prev) => [...prev, { role: "ai", text: '' }]);
+    
     const requestBody = {
       history: currentHistory.map(msg => ({ role: msg.role, text: msg.text })),
       questionContext: questions[currentQuestionIndex],
     };
+    
     try {
       const { data, error } = await supabase.functions.invoke(
         'get-ai-correction', 
@@ -365,6 +385,8 @@ export default function SimuladoPage() {
   
   const handleSendMessage = () => {
     if (!chatInput.trim() || isAiReplying) return;
+    stopTyping(); // Prevenção extra
+    
     const newUserMessage = { role: 'user', text: chatInput };
     const newHistory = [...chatHistory, newUserMessage];
     setChatHistory(newHistory);
@@ -372,6 +394,7 @@ export default function SimuladoPage() {
     getAiCorrection(newHistory);
   };
 
+  // --- RENDERIZAÇÃO DE ESTADOS ---
   if (loading) {
     return (
       <View style={styles.centeredScreen}>
@@ -431,7 +454,6 @@ export default function SimuladoPage() {
               <Text style={styles.headerTitle} numberOfLines={1}>
                 {headerTitle}
               </Text>
-              {/* Botão de Saída */}
               <TouchableOpacity onPress={handleExitSimulado} style={styles.closeButton}>
                 <X size={24} color={cores.secondary} />
               </TouchableOpacity>
@@ -553,8 +575,16 @@ export default function SimuladoPage() {
         </View>
       </View>
       
-      {/* MODAL DE CHAT IA (Bottom Sheet) */}
-      <Modal animationType="slide" transparent={true} visible={isModalOpen} onRequestClose={() => setIsModalOpen(false)}>
+      {/* MODAL DE CHAT IA */}
+      <Modal 
+        animationType="slide" 
+        transparent={true} 
+        visible={isModalOpen} 
+        onRequestClose={() => {
+          stopTyping(); // Para animação ao fechar via hardware back
+          setIsModalOpen(false);
+        }}
+      >
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalBackdrop}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
@@ -562,7 +592,13 @@ export default function SimuladoPage() {
                  <Sparkles size={20} color={cores.primary} />
                  <Text style={styles.headerTitle}>Correção com CertifAI</Text>
               </View>
-              <TouchableOpacity onPress={() => setIsModalOpen(false)} style={styles.closeButton}>
+              <TouchableOpacity 
+                onPress={() => {
+                  stopTyping(); // Para animação ao fechar via botão X
+                  setIsModalOpen(false);
+                }} 
+                style={styles.closeButton}
+              >
                 <X size={20} color={cores.secondary} />
               </TouchableOpacity>
             </View>
@@ -615,7 +651,7 @@ export default function SimuladoPage() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* NOVO MODAL DE CONFIRMAÇÃO DE SAÍDA (Estilo Dialog) */}
+      {/* MODAL DE CONFIRMAÇÃO DE SAÍDA */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -718,7 +754,7 @@ const styles = StyleSheet.create({
   chatScrollView: { flex: 1, padding: 16, backgroundColor: cores.softGray },
   userMessage: { alignSelf: 'flex-end', backgroundColor: cores.primary, padding: 12, borderRadius: 16, borderBottomRightRadius: 2, marginBottom: 8, maxWidth: '80%' },
   userMessageText: { color: cores.light, fontSize: 14 },
-  aiMessage: { alignSelf: 'center', backgroundColor: cores.light, borderRadius: 12, padding: 14, marginBottom: 10, maxWidth: '99%', shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 1, shadowRadius: 2, elevation: 2 },
+  aiMessage: { alignSelf: 'flex-start', marginBottom: 8, backgroundColor: cores.light, borderRadius: 12, padding: 14, maxWidth: '99%', shadowColor: 'rgba(0,0,0,0.05)', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 1, shadowRadius: 2, elevation: 2 },
   aiMessageText: { color: cores.secondary, fontSize: 14, lineHeight: 20, textAlign: 'left' },
   
   chatInputContainer: { flexDirection: 'row', alignItems: 'flex-end', marginHorizontal: 12, marginBottom: Platform.OS === 'ios' ? 24 : 12, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: cores.light, borderRadius: 30, borderWidth: 1, borderColor: cores.gray200, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 3 },
@@ -733,7 +769,6 @@ const styles = StyleSheet.create({
   difficultyHard: { backgroundColor: '#FEE2E2' },
   difficultyText: { fontSize: 12, fontWeight: 'bold', color: cores.secondary },
 
-  // Estilos do Modal de Alerta
   alertModalBackdrop: {
     flex: 1,
     justifyContent: 'center',
