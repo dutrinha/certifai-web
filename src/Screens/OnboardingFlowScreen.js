@@ -487,25 +487,10 @@ export default function OnboardingFlowScreen() {
             {/* Botão ACESSAR - Gatilho do Paywall */}
             <TouchableOpacity 
               style={[styles.button, {backgroundColor: cores.primary}]} 
-              onPress={() => {
-                  if (isPro) {
-                      // Se for PRO, entra direto
-                      handleCompleteOnboarding(); 
-                  } else {
-                      // Se for FREE, mostra o Paywall
-                      setShowPaywall(true); 
-                  }
-              }}
+              onPress={handleCompleteOnboarding} // Vai direto para a Home
             >
               <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar Plano</Text>
             </TouchableOpacity>
-
-            {/* Modal de Paywall */}
-            {/* onClose chama handleCompleteOnboarding, ou seja, ao fechar o Paywall, vai pra Home */}
-            <PaywallModal 
-              visible={showPaywall} 
-              onClose={handleCompleteOnboarding} 
-            />
           </View>
         );
         
