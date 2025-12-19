@@ -30,7 +30,7 @@ export default function PaywallModal({ visible, onClose }) {
   const appState = useRef(AppState.currentState);
 
   const [step, setStep] = useState('offer');
-  // ALTERADO: Padrão agora é semestral
+  // Padrão semestral
   const [selectedPlan, setSelectedPlan] = useState('semiannual');
   const [paymentMethod, setPaymentMethod] = useState('pix');
   
@@ -45,15 +45,20 @@ export default function PaywallModal({ visible, onClose }) {
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // ALTERADO: Configuração de preços para Semestral
+  // Configuração de preços
   const PRICES = { monthly: 29.90, semiannual: 119.90 }; 
-  // ALTERADO: Divisão por 6 meses para mostrar equivalência mensal
   const MONTHLY_PRICE_SEMESTRAL_EQUIVALENT = (PRICES.semiannual / 6).toFixed(2);
-  // ALTERADO: Desconto aproximado (29.90 * 6 = 179.40 vs 119.90) -> ~33% OFF
   const DISCOUNT_PERCENTAGE = 33; 
 
+  // --- CORREÇÃO APLICADA AQUI ---
+  // 1. Efeito APENAS para inicialização (Resetar estado quando ABRE o modal)
   useEffect(() => {
     if (visible) {
+        setStep('offer');
+        setSelectedPlan('semiannual'); // Reseta para o padrão ao abrir
+        setInstallments(1);
+        setPixData(null); // Limpa QR Code antigo
+        
         Animated.loop(
             Animated.sequence([
                 Animated.timing(pulseAnim, { toValue: 1.03, duration: 800, useNativeDriver: true }),
@@ -61,38 +66,41 @@ export default function PaywallModal({ visible, onClose }) {
             ])
         ).start();
     }
-  }, [visible]);
+  }, [visible]); // Dependência ÚNICA: visible
 
+  // 2. Efeito para Polling e User Data (SEM resetar o plano)
   useEffect(() => {
     if (!visible) return;
-    if (refreshSubscription) refreshSubscription();
-    if (user?.user_metadata?.full_name) setName(user.user_metadata.full_name);
-    setInstallments(1);
-    // Resetar para semestral ao abrir
-    setSelectedPlan('semiannual');
     
+    // Preenche nome se disponível
+    if (user?.user_metadata?.full_name && !name) setName(user.user_metadata.full_name);
+    
+    // Polling de pagamento
     const intervalId = setInterval(() => {
       if (step === 'payment' || loadingCard) {
           if (refreshSubscription) refreshSubscription();
       }
     }, 3000);
 
+    // Listener de AppState (voltar do app do banco)
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         if (refreshSubscription) refreshSubscription();
       }
       appState.current = nextAppState;
     });
+
     return () => {
       clearInterval(intervalId);
       subscription.remove();
     };
-  }, [visible, refreshSubscription, step, user, loadingCard]);
+  }, [visible, refreshSubscription, step, user, loadingCard]); // Dependências de polling
 
+  // Fecha se virar Pro
   useEffect(() => {
     if (isPro && visible) {
       onClose();
-      setStep('offer');
+      // O reset do setStep é feito no useEffect do visible
     }
   }, [isPro, visible, onClose]);
 
@@ -115,7 +123,7 @@ export default function PaywallModal({ visible, onClose }) {
           email: user.email, 
           name: name.trim() || user.user_metadata?.full_name,
           cpf: cpf.replace(/\D/g, ''), 
-          cycle: selectedPlan, // envia 'semiannual' ou 'monthly'
+          cycle: selectedPlan, // AGORA ESTÁ CORRETO (não reseta mais)
           method: 'credit_card',
           installments: selectedPlan === 'semiannual' ? installments : 1,
         },
@@ -141,7 +149,7 @@ export default function PaywallModal({ visible, onClose }) {
           email: user.email, 
           name: name.trim(), 
           cpf: cpfClean, 
-          cycle: selectedPlan, // envia 'semiannual' ou 'monthly'
+          cycle: selectedPlan, // AGORA ESTÁ CORRETO
           method: 'pix' 
         },
       });
@@ -174,7 +182,6 @@ export default function PaywallModal({ visible, onClose }) {
   );
 
   const InstallmentOption = ({ num }) => {
-    // ALTERADO: Cálculo baseado no preço semestral
     const value = PRICES.semiannual / num;
     return (
         <TouchableOpacity 
@@ -189,19 +196,19 @@ export default function PaywallModal({ visible, onClose }) {
     )
   }
 
-  // --- RENDER OFFER: VERSÃO COM RODAPÉ FIXO ---
+  // --- RENDER OFFER ---
   const renderOffer = () => (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
       <View style={styles.mainLayout}>
         
-        {/* 1. HEADER FIXO */}
+        {/* HEADER FIXO */}
         <View style={styles.fixedHeader}>
           <TouchableOpacity onPress={onClose} style={styles.closeIconHitbox}>
             <X size={20} color={theme.textSec} />
           </TouchableOpacity>
         </View>
 
-        {/* 2. CONTEÚDO ROLÁVEL (HERO + BENEFÍCIOS) */}
+        {/* CONTEÚDO ROLÁVEL */}
         <ScrollView 
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ 
@@ -210,7 +217,6 @@ export default function PaywallModal({ visible, onClose }) {
             paddingBottom: 380 
           }}
         >
-            {/* HERO SECTION */}
             <View style={styles.heroContainer}>
               <View style={styles.tagContainer}>
                 <Star size={12} color="#FFF" fill="#FFF" />
@@ -224,9 +230,7 @@ export default function PaywallModal({ visible, onClose }) {
               </Text>
             </View>
 
-            {/* LISTA DE VANTAGENS */}
             <View style={styles.benefitsListContainer}>
-              
               <BenefitRow 
                 icon={Brain} title="Mentor IA Pessoal 24/7" 
                 description="Tire dúvidas complexas na hora e receba explicações detalhadas."
@@ -247,14 +251,13 @@ export default function PaywallModal({ visible, onClose }) {
                 icon={Trophy} title="Acesso Total Imediato" 
                 description="Libere todas as certificações (CPA, C-Pro R, C-Pro I) em um único plano."
               />
-
             </View>
         </ScrollView>
 
-        {/* 3. RODAPÉ FIXO (PLANOS + BOTÃO) */}
+        {/* RODAPÉ FIXO */}
         <View style={styles.fixedBottomContainer}>
             <View style={styles.plansContainerCompact}>
-              {/* PLANO SEMESTRAL (Antigo Anual) */}
+              {/* PLANO SEMESTRAL */}
               <TouchableOpacity 
                 style={[styles.planCardOld, selectedPlan === 'semiannual' && styles.planCardSelectedOld]} 
                 onPress={() => setSelectedPlan('semiannual')}
@@ -265,7 +268,6 @@ export default function PaywallModal({ visible, onClose }) {
                 </View>
                 <View style={styles.planRowOld}>
                     <View style={{flex: 1}}>
-                        {/* ALTERADO: Texto do plano */}
                         <Text style={styles.planNameOldGreen}>Plano Semestral</Text>
                         <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
                             <Text style={styles.savingsTextOld}>ECONOMIZE {DISCOUNT_PERCENTAGE}%</Text>
@@ -277,7 +279,6 @@ export default function PaywallModal({ visible, onClose }) {
                             <Text style={styles.bigPriceOld}>{MONTHLY_PRICE_SEMESTRAL_EQUIVALENT.replace('.', ',')}</Text>
                             <Text style={styles.periodOld}>/mês</Text>
                         </View>
-                        {/* ALTERADO: Preço cheio semestral */}
                         <Text style={styles.fullPriceTextOld}>R$ {PRICES.semiannual.toFixed(2).replace('.', ',')} à vista</Text>
                     </View>
                 </View>
@@ -343,7 +344,6 @@ export default function PaywallModal({ visible, onClose }) {
           <Text style={[styles.methodTitle, paymentMethod === 'card' && {color: theme.primary}]}>Cartão de Crédito</Text>
         </TouchableOpacity>
 
-        {/* ALTERADO: Lógica de exibição do parcelamento para semestral */}
         {paymentMethod === 'card' && selectedPlan === 'semiannual' && (
             <View style={{marginTop: 12}}>
                 <Text style={styles.inputLabel}>Parcelamento</Text>
@@ -356,7 +356,7 @@ export default function PaywallModal({ visible, onClose }) {
                 {showInstallmentPicker && (
                     <View style={styles.installmentDropdown}>
                         <ScrollView style={{maxHeight: 150}} nestedScrollEnabled={true}>
-                            {/* Mantive até 12x para dar liberdade, mesmo sendo plano semestral */}
+                            {/* Limite de 6x */}
                             {[1, 2, 3, 4, 5, 6].map(num => <InstallmentOption key={num} num={num} />)}
                         </ScrollView>
                     </View>
@@ -457,7 +457,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.background, alignItems: 'center' },
   contentContainer: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH },
   
-  // --- LAYOUT ESTRUTURAL NOVO ---
   mainLayout: { flex: 1, position: 'relative' },
   
   fixedHeader: {
