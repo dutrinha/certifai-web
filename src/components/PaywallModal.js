@@ -1,4 +1,3 @@
-// src/components/PaywallModal.js
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal, View, Text, StyleSheet, TouchableOpacity, ScrollView,
@@ -31,7 +30,8 @@ export default function PaywallModal({ visible, onClose }) {
   const appState = useRef(AppState.currentState);
 
   const [step, setStep] = useState('offer');
-  const [selectedPlan, setSelectedPlan] = useState('yearly');
+  // ALTERADO: Padrão agora é semestral
+  const [selectedPlan, setSelectedPlan] = useState('semiannual');
   const [paymentMethod, setPaymentMethod] = useState('pix');
   
   const [installments, setInstallments] = useState(1);
@@ -45,9 +45,12 @@ export default function PaywallModal({ visible, onClose }) {
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  const PRICES = { monthly: 29.90, yearly: 197.00 }; 
-  const MONTHLY_PRICE_ANUAL_EQUIVALENT = (PRICES.yearly / 12).toFixed(2);
-  const DISCOUNT_PERCENTAGE = 45; 
+  // ALTERADO: Configuração de preços para Semestral
+  const PRICES = { monthly: 29.90, semiannual: 119.90 }; 
+  // ALTERADO: Divisão por 6 meses para mostrar equivalência mensal
+  const MONTHLY_PRICE_SEMESTRAL_EQUIVALENT = (PRICES.semiannual / 6).toFixed(2);
+  // ALTERADO: Desconto aproximado (29.90 * 6 = 179.40 vs 119.90) -> ~33% OFF
+  const DISCOUNT_PERCENTAGE = 33; 
 
   useEffect(() => {
     if (visible) {
@@ -65,6 +68,8 @@ export default function PaywallModal({ visible, onClose }) {
     if (refreshSubscription) refreshSubscription();
     if (user?.user_metadata?.full_name) setName(user.user_metadata.full_name);
     setInstallments(1);
+    // Resetar para semestral ao abrir
+    setSelectedPlan('semiannual');
     
     const intervalId = setInterval(() => {
       if (step === 'payment' || loadingCard) {
@@ -106,9 +111,13 @@ export default function PaywallModal({ visible, onClose }) {
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-charge', {
         body: {
-          userId: user.id, email: user.email, name: name.trim() || user.user_metadata?.full_name,
-          cpf: cpf.replace(/\D/g, ''), cycle: selectedPlan, method: 'credit_card',
-          installments: selectedPlan === 'yearly' ? installments : 1,
+          userId: user.id, 
+          email: user.email, 
+          name: name.trim() || user.user_metadata?.full_name,
+          cpf: cpf.replace(/\D/g, ''), 
+          cycle: selectedPlan, // envia 'semiannual' ou 'monthly'
+          method: 'credit_card',
+          installments: selectedPlan === 'semiannual' ? installments : 1,
         },
       });
       if (error) throw error;
@@ -127,7 +136,14 @@ export default function PaywallModal({ visible, onClose }) {
     setLoadingPix(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-charge', {
-        body: { userId: user.id, email: user.email, name: name.trim(), cpf: cpfClean, cycle: selectedPlan, method: 'pix' },
+        body: { 
+          userId: user.id, 
+          email: user.email, 
+          name: name.trim(), 
+          cpf: cpfClean, 
+          cycle: selectedPlan, // envia 'semiannual' ou 'monthly'
+          method: 'pix' 
+        },
       });
       if (error) throw error;
       setPixData(data);
@@ -158,7 +174,8 @@ export default function PaywallModal({ visible, onClose }) {
   );
 
   const InstallmentOption = ({ num }) => {
-    const value = PRICES.yearly / num;
+    // ALTERADO: Cálculo baseado no preço semestral
+    const value = PRICES.semiannual / num;
     return (
         <TouchableOpacity 
             style={[styles.installmentOption, installments === num && styles.installmentOptionSelected]}
@@ -190,7 +207,7 @@ export default function PaywallModal({ visible, onClose }) {
           contentContainerStyle={{ 
             paddingHorizontal: 20,
             paddingTop: 10,
-            paddingBottom: 380 // Espaço extra para o conteúdo não ficar atrás do footer
+            paddingBottom: 380 
           }}
         >
             {/* HERO SECTION */}
@@ -237,10 +254,10 @@ export default function PaywallModal({ visible, onClose }) {
         {/* 3. RODAPÉ FIXO (PLANOS + BOTÃO) */}
         <View style={styles.fixedBottomContainer}>
             <View style={styles.plansContainerCompact}>
-              {/* PLANO ANUAL */}
+              {/* PLANO SEMESTRAL (Antigo Anual) */}
               <TouchableOpacity 
-                style={[styles.planCardOld, selectedPlan === 'yearly' && styles.planCardSelectedOld]} 
-                onPress={() => setSelectedPlan('yearly')}
+                style={[styles.planCardOld, selectedPlan === 'semiannual' && styles.planCardSelectedOld]} 
+                onPress={() => setSelectedPlan('semiannual')}
                 activeOpacity={0.9}
               >
                 <View style={styles.popularBadgeOld}>
@@ -248,7 +265,8 @@ export default function PaywallModal({ visible, onClose }) {
                 </View>
                 <View style={styles.planRowOld}>
                     <View style={{flex: 1}}>
-                        <Text style={styles.planNameOldGreen}>Plano Anual</Text>
+                        {/* ALTERADO: Texto do plano */}
+                        <Text style={styles.planNameOldGreen}>Plano Semestral</Text>
                         <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
                             <Text style={styles.savingsTextOld}>ECONOMIZE {DISCOUNT_PERCENTAGE}%</Text>
                         </View>
@@ -256,10 +274,11 @@ export default function PaywallModal({ visible, onClose }) {
                     <View style={{alignItems: 'flex-end'}}>
                         <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
                             <Text style={styles.currencyOld}>R$</Text>
-                            <Text style={styles.bigPriceOld}>{MONTHLY_PRICE_ANUAL_EQUIVALENT.replace('.', ',')}</Text>
+                            <Text style={styles.bigPriceOld}>{MONTHLY_PRICE_SEMESTRAL_EQUIVALENT.replace('.', ',')}</Text>
                             <Text style={styles.periodOld}>/mês</Text>
                         </View>
-                        <Text style={styles.fullPriceTextOld}>R$ {PRICES.yearly.toFixed(2).replace('.', ',')} à vista</Text>
+                        {/* ALTERADO: Preço cheio semestral */}
+                        <Text style={styles.fullPriceTextOld}>R$ {PRICES.semiannual.toFixed(2).replace('.', ',')} à vista</Text>
                     </View>
                 </View>
               </TouchableOpacity>
@@ -324,18 +343,20 @@ export default function PaywallModal({ visible, onClose }) {
           <Text style={[styles.methodTitle, paymentMethod === 'card' && {color: theme.primary}]}>Cartão de Crédito</Text>
         </TouchableOpacity>
 
-        {paymentMethod === 'card' && selectedPlan === 'yearly' && (
+        {/* ALTERADO: Lógica de exibição do parcelamento para semestral */}
+        {paymentMethod === 'card' && selectedPlan === 'semiannual' && (
             <View style={{marginTop: 12}}>
                 <Text style={styles.inputLabel}>Parcelamento</Text>
                 <TouchableOpacity style={styles.installmentSelector} onPress={() => setShowInstallmentPicker(!showInstallmentPicker)}>
                     <Text style={styles.installmentSelectorText}>
-                        {installments}x de R$ {(PRICES.yearly / installments).toFixed(2).replace('.', ',')}
+                        {installments}x de R$ {(PRICES.semiannual / installments).toFixed(2).replace('.', ',')}
                     </Text>
                     <ChevronDown size={20} color={theme.textSec} />
                 </TouchableOpacity>
                 {showInstallmentPicker && (
                     <View style={styles.installmentDropdown}>
                         <ScrollView style={{maxHeight: 150}} nestedScrollEnabled={true}>
+                            {/* Mantive até 12x para dar liberdade, mesmo sendo plano semestral */}
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => <InstallmentOption key={num} num={num} />)}
                         </ScrollView>
                     </View>
@@ -468,17 +489,14 @@ const styles = StyleSheet.create({
     borderTopColor: theme.border,
   },
 
-  // --- COMPONENTES ANTERIORES ---
   closeIconHitbox: { padding: 6, backgroundColor: '#EDF2F7', borderRadius: 16 },
   
-  // --- HERO SECTION ---
   heroContainer: { alignItems: 'center', marginBottom: 24, marginTop: 4 },
   tagContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.orange, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginBottom: 12, gap: 6 },
   tagText: { color: '#FFF', fontWeight: '800', fontSize: 11, letterSpacing: 0.5 },
   heroTitle: { fontSize: 26, fontWeight: '900', color: theme.darkBlue, textAlign: 'center', marginBottom: 8, lineHeight: 32 },
   heroSubtitle: { fontSize: 15, color: theme.textSec, textAlign: 'center', paddingHorizontal: 10, lineHeight: 22 },
   
-  // --- BENEFITS LIST ---
   benefitsListContainer: {
     width: '100%',
     marginBottom: 20,
@@ -498,12 +516,6 @@ const styles = StyleSheet.create({
   benefitTitle: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 2 },
   benefitDesc: { fontSize: 13, color: theme.textSec, lineHeight: 18 },
 
-  // --- DIVIDER ---
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, paddingHorizontal: 10 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: theme.border },
-  dividerText: { fontSize: 12, fontWeight: '700', color: theme.textSec, marginHorizontal: 12, letterSpacing: 1 },
-
-  // --- PLANOS (AJUSTADOS PARA O FOOTER) ---
   plansContainerCompact: { gap: 10, marginBottom: 16 },
   planCardOld: { 
     backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 12, 
@@ -517,25 +529,22 @@ const styles = StyleSheet.create({
   planNameOldGreen: { fontSize: 16, fontWeight: 'bold', color: theme.primary }, 
   planNameOldBlack: { fontSize: 16, fontWeight: 'bold', color: theme.text }, 
   savingsTextOld: { fontSize: 11, fontWeight: 'bold', color: theme.primary, marginRight: 6 },
-  oldPriceOld: { textDecorationLine: 'line-through', color: theme.textSec, fontSize: 12 },
   currencyOld: { fontSize: 14, fontWeight: '600', color: theme.text, marginRight: 2 },
   bigPriceOld: { fontSize: 26, fontWeight: '900', color: theme.text },
   periodOld: { fontSize: 13, color: theme.textSec, fontWeight: '400', marginLeft: 2 },
   fullPriceTextOld: { fontSize: 11, color: theme.textSec, marginTop: 2 },
   planNoteOld: { fontSize: 12, color: theme.textSec, marginTop: 2 },
   
-  // --- FOOTER ELEMENTS ---
   footerCompact: { paddingVertical: 0, alignItems: 'center', gap: 12 },
   ctaButtonCompact: { backgroundColor: theme.primary, borderRadius: 14, paddingVertical: 16, width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, shadowColor: theme.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   ctaTextCompact: { color: '#FFF', fontSize: 16, fontWeight: 'bold', letterSpacing: 0.5 },
   guaranteeRowCompact: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   guaranteeTextCompact: { color: theme.textSec, fontSize: 12, fontWeight: '500' },
 
-  // --- OUTROS ESTILOS (MANTIDOS) ---
   compactHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
   compactHeaderTitle: { fontSize: 16, fontWeight: 'bold', color: theme.text },
   
-  inputLabel: { color: theme.grayInput ,fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 6, marginTop: 12 },
+  inputLabel: { fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 6, marginTop: 12 },
   inputFieldCompact: { backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, padding: 12, borderRadius: 10, fontSize: 15 },
   
   methodCard: { flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 12, marginBottom: 8, gap: 12 },
