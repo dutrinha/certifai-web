@@ -357,7 +357,7 @@ export default function PaywallModal({ visible, onClose }) {
                     <View style={styles.installmentDropdown}>
                         <ScrollView style={{maxHeight: 150}} nestedScrollEnabled={true}>
                             {/* Mantive até 12x para dar liberdade, mesmo sendo plano semestral */}
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => <InstallmentOption key={num} num={num} />)}
+                            {[1, 2, 3, 4, 5, 6].map(num => <InstallmentOption key={num} num={num} />)}
                         </ScrollView>
                     </View>
                 )}
