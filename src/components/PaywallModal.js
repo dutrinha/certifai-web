@@ -46,9 +46,9 @@ export default function PaywallModal({ visible, onClose }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Configuração de preços
-  const PRICES = { monthly: 29.90, semiannual: 119.90 }; 
+  const PRICES = { monthly: 29.90, semiannual: 99.90 }; 
   const MONTHLY_PRICE_SEMESTRAL_EQUIVALENT = (PRICES.semiannual / 6).toFixed(2);
-  const DISCOUNT_PERCENTAGE = 33; 
+  const DISCOUNT_PERCENTAGE = 45; 
 
   // --- CORREÇÃO APLICADA AQUI ---
   // 1. Efeito APENAS para inicialização (Resetar estado quando ABRE o modal)
