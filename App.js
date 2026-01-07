@@ -1,4 +1,4 @@
-// /App.jsx (VERSÃO ATUALIZADA - Onboarding Anônimo)
+// /App.jsx (VERSÃO CORRIGIDA - Sem Loop de Onboarding)
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View, StyleSheet, StatusBar, Platform } from 'react-native';
@@ -36,6 +36,7 @@ import ModuleLessonsPage from './src/pages/ModuleLessonPage';
 import LoginScreen from './src/Screens/LoginScreen';
 import SettingsScreen from './src/Screens/SettingsScreen';
 import OnboardingNavigator from './src/Screens/OnboardingNavigator';
+import { WebLayout } from './src/components/WebLayout';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -119,17 +120,16 @@ function RootNavigator() {
   }
 
   const isLoggedIn = session && user;
-  const hasCompletedOnboarding = user?.user_metadata?.onboarding_completed === true;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {isLoggedIn ? (
+        // --- ÁREA LOGADA ---
+        // Se está logado, entra nas Tabs.
+        // O Onboarding NÃO existe aqui, forçando o navegador a ir para a próxima tela válida (Tabs).
         <>
-          {hasCompletedOnboarding ? (
-            <Stack.Screen name="Tabs" component={TabNavigator} />
-          ) : (
-            <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
-          )}
+          <Stack.Screen name="Tabs" component={TabNavigator} />
+          
           <Stack.Screen name="cpa10-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa10', certificationName: 'CPA-10' }} />
           <Stack.Screen name="cpa20-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa20', certificationName: 'CPA-20' }} />
           <Stack.Screen name="cea-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cea', certificationName: 'CEA' }} />
@@ -151,8 +151,15 @@ function RootNavigator() {
           <Stack.Screen name="FlashCardPage" component={FlashCardPage} />
           <Stack.Screen name="FlashCardConfigPage" component={FlashCardConfigPage} />
           <Stack.Screen name="ModuleLessonsPage" component={ModuleLessonsPage} />
+          
+          {/* SE você precisar acessar o onboarding de dentro das configurações,
+              use um nome diferente para não confundir o navegador na inicialização.
+              Ex: <Stack.Screen name="OnboardingSettings" component={OnboardingNavigator} />
+          */}
         </>
       ) : (
+        // --- ÁREA DESLOGADA (PÚBLICA) ---
+        // O usuário começa aqui.
         <>
           <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
           <Stack.Screen name="Auth" component={AuthNavigator} />
@@ -161,8 +168,6 @@ function RootNavigator() {
     </Stack.Navigator>
   );
 }
-
-import { WebLayout } from './src/components/WebLayout';
 
 export default function App() {
   console.log('App: Rendering AuthProvider');
