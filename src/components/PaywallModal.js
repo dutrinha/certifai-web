@@ -9,6 +9,7 @@ import {
   Brain, Target, TrendingUp, BookOpen
 } from 'lucide-react-native';
 import { useAuth, supabase } from '../context/AuthContext'; // Ajuste o caminho conforme seu projeto
+import CreditCardModal from './CreditCardModal';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 
@@ -36,6 +37,7 @@ export default function PaywallModal({ visible, onClose }) {
   
   const [installments, setInstallments] = useState(1);
   const [showInstallmentPicker, setShowInstallmentPicker] = useState(false);
+  const [showCardModal, setShowCardModal] = useState(false);
 
   const [loadingPix, setLoadingPix] = useState(false);
   const [loadingCard, setLoadingCard] = useState(false);
@@ -52,12 +54,13 @@ export default function PaywallModal({ visible, onClose }) {
 
   // --- CORREÇÃO APLICADA AQUI ---
   // 1. Efeito APENAS para inicialização (Resetar estado quando ABRE o modal)
-  useEffect(() => {
+useEffect(() => {
     if (visible) {
         setStep('offer');
-        setSelectedPlan('semiannual'); // Reseta para o padrão ao abrir
+        setSelectedPlan('semiannual'); 
         setInstallments(1);
-        setPixData(null); // Limpa QR Code antigo
+        setPixData(null);
+        setShowCardModal(false);
         
         Animated.loop(
             Animated.sequence([
@@ -366,7 +369,14 @@ export default function PaywallModal({ visible, onClose }) {
 
         <TouchableOpacity
           style={[styles.ctaButtonCompact, { marginTop: 24 }]}
-          onPress={() => { if (paymentMethod === 'pix') setStep('cpf'); else handleCardCheckout(); }}
+          onPress={() => {
+          if (paymentMethod === 'pix') {
+            setStep('cpf');
+          } else {
+            // Em vez de chamar o checkout antigo, abrimos o modal
+            setShowCardModal(true);
+  }
+}}
           disabled={loadingCard}
         >
           {loadingCard ? <ActivityIndicator color="#FFF" /> : <Text style={styles.ctaTextCompact}>CONTINUAR</Text>}
@@ -438,18 +448,33 @@ export default function PaywallModal({ visible, onClose }) {
     </SafeAreaView>
   );
 
-  return (
-    <Modal animationType="slide" visible={visible} onRequestClose={onClose} presentationStyle="pageSheet">
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.container}>
-        <View style={styles.contentContainer}>
-          {step === 'offer' && renderOffer()}
-          {step === 'method' && renderPaymentMethod()}
-          {step === 'cpf' && renderCpfInput()}
-          {step === 'payment' && renderPayment()}
+return (
+    <>
+      {/* O seu Modal original permanece aqui inalterado */}
+      <Modal animationType="slide" visible={visible} onRequestClose={onClose} presentationStyle="pageSheet">
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.container}>
+          <View style={styles.contentContainer}>
+            {step === 'offer' && renderOffer()}
+            {step === 'method' && renderPaymentMethod()}
+            {step === 'cpf' && renderCpfInput()}
+            {step === 'payment' && renderPayment()} 
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Adicione o Modal de Cartão aqui fora */}
+      <CreditCardModal 
+        visible={showCardModal} 
+        onClose={() => setShowCardModal(false)}
+        onSuccess={() => {
+            setShowCardModal(false); // Fecha o modal do cartão
+            onClose();               // Fecha o paywall inteiro
+        }}
+        plan={selectedPlan}
+        installments={installments}
+      />
+    </>
   );
 }
 
