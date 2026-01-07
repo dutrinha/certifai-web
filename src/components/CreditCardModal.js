@@ -100,7 +100,7 @@ export default function CreditCardModal({ visible, onClose, onSuccess, plan, ins
       };
 
       // MUDAR PARA 'create-pix-charge' EM PRODUÇÃO
-      const { data, error } = await supabase.functions.invoke('create-test-charge', { body: payload });
+      const { data, error } = await supabase.functions.invoke('create-pix-charge', { body: payload });
       
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
