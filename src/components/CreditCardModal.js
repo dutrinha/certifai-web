@@ -228,7 +228,14 @@ const styles = StyleSheet.create({
   inputFocused: { borderColor: theme.primary, backgroundColor: '#FFF' },
   inputLabel: { fontSize: 11, color: theme.textSec, fontWeight: '600', marginBottom: 2 },
   inputRow: { flexDirection: 'row', alignItems: 'center' },
-  textInput: { flex: 1, fontSize: 15, color: theme.text, padding: 0, height: 24 }, 
+  textInput: { 
+    flex: 1, 
+    fontSize: 15, 
+    color: theme.text, 
+    padding: 0, 
+    height: 24,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {})
+  },
 
   payButton: { backgroundColor: theme.primary, borderRadius: 12, height: 56, justifyContent: 'center', alignItems: 'center', marginTop: 12, shadowColor: theme.primary, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   payButtonSuccess: { backgroundColor: theme.darkBlue },
