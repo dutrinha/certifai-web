@@ -73,8 +73,8 @@ export default function OnboardingNavigator() {
       >
         {/* Etapa 1: Pedir o nome e certificação (Feito) */}
         <OnboardingStack.Screen 
-          name="Onboarding" 
-          component={OnboardingFlowScreen} 
+          name="Welcome" 
+          component={WelcomeScreen} 
         />
         
         {/* Etapas 2-6: O fluxo da "Masterclass" */}
