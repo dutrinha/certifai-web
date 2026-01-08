@@ -43,6 +43,25 @@ const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 const TrilhasStack = createNativeStackNavigator();
 
+const linking = {
+  prefixes: ['https://certifai.com.br', 'certifai://'],
+  config: {
+    screens: {
+      Onboarding: 'onboarding', // Mapeia /onboarding
+      Auth: 'auth',             // Mapeia /auth
+      Tabs: {
+        screens: {
+          Início: 'home',
+          Trilhas: 'trilhas',
+          Chat: 'chat',
+          Progresso: 'progresso',
+        },
+      },
+      // Adicione outras rotas importantes aqui se quiser deep linking
+    },
+  },
+};
+
 // Cores
 const lightColors = {
   primary: '#00C853', secondary: '#1A202C', background: '#FFFFFF',
@@ -183,6 +202,7 @@ export default function App() {
       <PaperProvider theme={MD3LightTheme}>
         <NavigationContainer
           theme={DefaultTheme}
+          linking={linking}
           documentTitle={{
             formatter: () => 'CertifAI',
           }}
