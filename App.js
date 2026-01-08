@@ -44,24 +44,32 @@ const AuthStack = createNativeStackNavigator();
 const TrilhasStack = createNativeStackNavigator();
 
 const linking = {
-  prefixes: ['https://certifai.com.br', 'certifai://'],
+  prefixes: [
+    'https://certifai.com.br', 
+    'certifai://',
+  ],
   config: {
     screens: {
-      Onboarding: 'onboarding', // Mapeia /onboarding
-      Auth: 'auth',             // Mapeia /auth
+      // Rota para quem já logou (App.js decide, mas mapeamos por segurança)
       Tabs: {
         screens: {
           Início: 'home',
-          Trilhas: 'trilhas',
-          Chat: 'chat',
-          Progresso: 'progresso',
         },
       },
-      // Adicione outras rotas importantes aqui se quiser deep linking
+      // A mágica acontece aqui:
+      Onboarding: {
+        path: 'onboarding', 
+        screens: {
+          // Se entrar em certifai.com.br/onboarding -> vai pra capa (Welcome)
+          Welcome: '', 
+          // Se entrar em certifai.com.br/onboarding/comecar -> VAI DIRETO PRO FLUXO!
+          OnboardingFlow: 'comecar', 
+        },
+      },
+      Auth: 'auth',
     },
   },
 };
-
 // Cores
 const lightColors = {
   primary: '#00C853', secondary: '#1A202C', background: '#FFFFFF',
