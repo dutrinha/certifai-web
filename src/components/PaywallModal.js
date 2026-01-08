@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   tagContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.orange, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginBottom: 12, gap: 6 },
   tagText: { color: '#FFF', fontWeight: '800', fontSize: 11, letterSpacing: 0.5 },
   heroTitle: { fontSize: 26, fontWeight: '900', color: theme.darkBlue, textAlign: 'center', marginBottom: 8, lineHeight: 32 },
-  heroSubtitle: { fontSize: 15, color: theme.textSec, textAlign: 'center', paddingHorizontal: 10, lineHeight: 22 },
+  heroSubtitle: { fontSize: 14, color: theme.textSec, textAlign: 'center', paddingHorizontal: 10, lineHeight: 22 },
   
   benefitsListContainer: {
     width: '100%',
