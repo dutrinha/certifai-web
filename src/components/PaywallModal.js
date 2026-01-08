@@ -229,7 +229,7 @@ useEffect(() => {
                 Sua Carreira no Mercado Financeiro <Text style={{ color: theme.primary }}>Começa agora.</Text>
               </Text>
               <Text style={styles.heroSubtitle}>
-                Não jogue tempo fora estudando material vencido.<Text style={{fontWeight: 'bold', color: theme.text}}>Desbloqueie o único conteúdo atualizado</Text> para a prova de 2026.
+                Não estude por material vencido.<Text style={{fontWeight: 'bold', color: theme.text}}> Desbloqueie o único conteúdo atualizado</Text> para a prova de 2026.
               </Text>
             </View>
 
