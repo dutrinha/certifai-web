@@ -295,20 +295,38 @@ export default function OnboardingFlowScreen() {
     setSelectedAnswer(null);
     setStep((s) => s + 1);
   };
-  const prevStep = () => (step === 1 ? navigation.goBack() : setStep((s) => s - 1));
+const handleBack = () => {
+    // 1. Se estiver nos passos seguintes (2, 3, 4...), apenas volta um slide
+    if (step > 1) {
+      setStep((s) => s - 1);
+      return;
+    }
+
+    // 2. Se estiver no Passo 1 (O começo de tudo):
+    if (navigation.canGoBack()) {
+      // Se tiver histórico (veio navegando normal), volta
+      navigation.goBack();
+    } else {
+      // Se NÃO tiver histórico (veio do Anúncio/Deep Link), FORÇA ir para a capa
+      navigation.navigate('Welcome');
+    }
+  };
 
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
-      <TouchableOpacity onPress={prevStep} style={styles.backButton}>
+      {/* Botão de Voltar com a nova função */}
+      <TouchableOpacity onPress={handleBack} style={styles.backButton}>
         <ArrowLeft size={24} color={cores.gray500} />
       </TouchableOpacity>
+      
+      {/* Barra de Progresso */}
       <View style={styles.progressBar}>
-        <View style={[styles.progressBarFill, { width: `${((step + 1) / 9) * 100}%` }]} />
+        <View style={[styles.progressBarFill, { width: `${(step / 9) * 100}%` }]} />
       </View>
-      <Text style={styles.progressText}>{step + 1} / 9</Text>
+      <Text style={styles.progressText}>{step} / 9</Text>
     </View>
   );
-
+  
   const renderStep = () => {
     switch (step) {
       case 1:
