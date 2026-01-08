@@ -331,12 +331,49 @@ const handleBack = () => {
     switch (step) {
       case 1:
         return (
-          <View style={styles.stepContainer}>
-            <Text style={styles.title}>Qual certificação você vai tirar em 2026?</Text>
+          
+        <View style={styles.stepContainer}>
+            <Text style={styles.title}>Para qual certificação você vai estudar?</Text>
             <Text style={styles.subtitle}>Isso nos ajuda a ajustar seu plano de estudos.</Text>
-            <MotivationButton icon={Briefcase} title="CPA" subtitle="Porta de entrada do mercado financeiro" selected={certification === 'cpa'} onPress={() => setCertification('cpa')} />
-            <MotivationButton icon={Briefcase} title="C-PRO R" subtitle="Especialista em relacionamentos" selected={certification === 'cpror'} onPress={() => setCertification('cpror')} />
-            <MotivationButton icon={Briefcase} title="C-PRO I" subtitle="Especialista em investimentos" selected={certification === 'cproi'} onPress={() => setCertification('cproi')} />
+            
+            <MotivationButton 
+              icon={Briefcase} 
+              title="CPA" 
+              subtitle={
+                <Text>
+                  Porta de entrada em bancos e cooperativas{"\n"}Média Salarial:
+                  <Text style={{ fontWeight: 'bold' }}> R$ 3.500 a R$ 4.500</Text>
+                </Text>
+              } 
+              selected={certification === 'cpa'} 
+              onPress={() => setCertification('cpa')} 
+            />
+
+            <MotivationButton 
+              icon={Briefcase} 
+              title="C-PRO R" 
+              subtitle={
+                <Text>
+                  Especialista em relacionamentos{"\n"}Média Salarial:
+                  <Text style={{ fontWeight: 'bold' }}> R$ 6.000 a R$ 9.000</Text>
+                </Text>
+              } 
+              selected={certification === 'cpror'} 
+              onPress={() => setCertification('cpror')} 
+            />
+
+            <MotivationButton 
+              icon={Briefcase} 
+              title="C-PRO I" 
+              subtitle={
+                <Text>
+                  Especialista em investimentos{"\n"}Média Salarial:
+                  <Text style={{ fontWeight: 'bold' }}> R$ 10.000 a R$ 18.000+</Text>
+                </Text>
+              } 
+              selected={certification === 'cproi'} 
+              onPress={() => setCertification('cproi')} 
+            />
           </View>
         );
       case 2:
