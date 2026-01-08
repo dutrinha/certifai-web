@@ -332,7 +332,7 @@ const handleBack = () => {
       case 1:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>Para qual certificação você estuda?</Text>
+            <Text style={styles.title}>Qual certificação você vai tirar em 2026?</Text>
             <Text style={styles.subtitle}>Isso nos ajuda a ajustar seu plano de estudos.</Text>
             <MotivationButton icon={Briefcase} title="CPA" subtitle="Porta de entrada do mercado financeiro" selected={certification === 'cpa'} onPress={() => setCertification('cpa')} />
             <MotivationButton icon={Briefcase} title="C-PRO R" subtitle="Especialista em relacionamentos" selected={certification === 'cpror'} onPress={() => setCertification('cpror')} />
@@ -507,7 +507,7 @@ const handleBack = () => {
               style={[styles.button, {backgroundColor: cores.primary}]} 
               onPress={handleCompleteOnboarding} // Vai direto para a Home
             >
-              <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar Plano</Text>
+              <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar Plano Atualizado</Text>
             </TouchableOpacity>
           </View>
         );
