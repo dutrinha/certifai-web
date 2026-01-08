@@ -229,31 +229,32 @@ useEffect(() => {
                 Sua Carreira no Mercado Financeiro <Text style={{ color: theme.primary }}>Começa agora.</Text>
               </Text>
               <Text style={styles.heroSubtitle}>
-                Desbloqueie o método que já aprovou <Text style={{fontWeight: 'bold', color: theme.text}}>+1.000 profissionais</Text> e elimine o risco de reprovar.
+                Não jogue tempo fora estudando material vencido.<Text style={{fontWeight: 'bold', color: theme.text}}>Desbloqueie o único conteúdo atualizado</Text> para a prova de 2026.
               </Text>
             </View>
 
             <View style={styles.benefitsListContainer}>
               <BenefitRow 
-                icon={Brain} title="Mentor IA Pessoal 24/7" 
-                description="Tire dúvidas complexas na hora e receba explicações detalhadas."
+                icon={Trophy} title="Um plano, todas certificações" 
+                description="Libere todas as certificações (CPA, C-Pro R, C-Pro I) em um único plano."
               />
               <BenefitRow 
-                icon={Target} title="Simulados Reais de Prova" 
-                description="Banco de questões idênticas às da prova oficial."
+                icon={Target} title="Simulados Reais da Prova" 
+                description="Banco de questões idênticas às das NOVAS Certificações."
+              />
+              <BenefitRow 
+                icon={BookOpen} title="Cases e Questões Interativas" 
+                description="Conteúdo novo cobrado nas novas certificações."
               />
               <BenefitRow 
                 icon={TrendingUp} title="Flashcards Inteligentes" 
-                description="Metodologia de retenção que garante que você não esqueça o que estudou."
+                description="Metodologia de retenção que garante que você não esqueça."
               />
               <BenefitRow 
-                icon={BookOpen} title="Cases Práticos de Mercado" 
-                description="Não decore apenas. Aprenda a aplicar o conhecimento no dia a dia."
+                icon={Brain} title="Mentor IA Pessoal 24/7" 
+                description="Tire dúvidas complexas na hora e receba explicações detalhadas."
               />
-              <BenefitRow 
-                icon={Trophy} title="Acesso Total Imediato" 
-                description="Libere todas as certificações (CPA, C-Pro R, C-Pro I) em um único plano."
-              />
+                  
             </View>
         </ScrollView>
 
@@ -313,7 +314,7 @@ useEffect(() => {
             <View style={styles.footerCompact}>
                 <Animated.View style={{ transform: [{ scale: pulseAnim }], width: '100%' }}>
                     <TouchableOpacity style={styles.ctaButtonCompact} onPress={() => setStep('method')}>
-                    <Text style={styles.ctaTextCompact}>COMEÇAR AGORA</Text>
+                    <Text style={styles.ctaTextCompact}>QUERO MINHA APROVAÇÃO</Text>
                     </TouchableOpacity>
                 </Animated.View>
                 <View style={styles.guaranteeRowCompact}>
