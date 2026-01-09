@@ -71,14 +71,24 @@ const MarkdownRenderer = ({ text, style }) => {
 
 const dummyQuestion = {
   question: "Qual título público federal protege o investidor contra a inflação (IPCA)?",
-  options: { A: "Tesouro Selic (LFT)", B: "Tesouro Prefixado (LTN)", C: "Tesouro IPCA+ (NTN-B)", D: "CDB de liquidez diária" },
+  options: { 
+    A: "Tesouro Selic (LFT)", 
+    B: "Tesouro Prefixado (LTN)", 
+    C: "Tesouro IPCA+ (NTN-B)", 
+    D: "CDB de liquidez diária" 
+  },
   answer: "C",
+  // 1. Feedback Padrão (Texto curto que aparece logo que responde)
   explanation: {
-    C: { title: "Você tem boa base!", text: "Exato! O **Tesouro IPCA+ (NTN-B)** é o único que garante o rendimento acima da inflação. Vamos te ajudar a dominar todos os pontos." },
-    A: { title: "Quase lá!", text: "O **Tesouro Selic (LFT)** protege da variação da *taxa de juros*, mas não da *inflação*." },
-    B: { title: "Cuidado com essa!", text: "O **Prefixado (LTN)** tem taxa *fixa*, então se a inflação subir, seu dinheiro perde valor." },
-    D: { title: "Atenção aos detalhes!", text: "O **CDB** é um título *privado* (de banco). A pergunta foi sobre *públicos federais*." }
-  }
+    B: { 
+      title: "Alternativa Incorreta", 
+      text: "O **Tesouro Prefixado** tem taxa fixa e não protege contra a alta da inflação. O correto é o IPCA+." 
+    },
+  },
+  chatFlow: [
+    { type: 'user', text: "Mas o Prefixado não é seguro?" },
+    { type: 'ai', text: "É seguro contra calote, mas não contra a **perda de poder de compra**. Se a inflação subir para 15% e seu título pagar 10%, você perde dinheiro real!" }
+  ]
 };
 
 const MotivationButton = ({ icon: Icon, title, subtitle, selected, onPress }) => (
@@ -256,17 +266,13 @@ const AutoCarousel = () => {
 export default function OnboardingFlowScreen() {
   const navigation = useNavigation();
   const { onboardingData, updateData } = useOnboarding();
-  const { user, isPro, loading: authLoading } = useAuth(); 
+  const { user, loading: authLoading } = useAuth(); 
 
-  // Determina se o usuário já existe para começar no passo final
   const isUserReal = user && !user.is_anonymous;
   const initialStep = isUserReal ? 8 : 1;
   const [step, setStep] = useState(initialStep);
   
-  // --- ESTADOS DO PASSO 8 (LOADING E PAYWALL) ---
-  // Se começou no passo 8, já começa "construindo". Se não, começa "idle".
   const [planBuildingStatus, setPlanBuildingStatus] = useState(initialStep === 8 ? 'building' : 'idle');
-  const [showPaywall, setShowPaywall] = useState(false);
 
   // Campos dos passos anteriores
   const [motivation, setMotivation] = useState(null);
@@ -275,18 +281,65 @@ export default function OnboardingFlowScreen() {
   const [isVerified, setIsVerified] = useState(false);
   const [name, setName] = useState('');
 
-  // --- EFEITO: SIMULAÇÃO DE "MONTANDO PLANO" ---
+  // =======================================================
+  // ☆ NOVOS ESTADOS PARA A DEMO (Adicione isto!) ☆
+  // =======================================================
+  const [aiButtonPressed, setAiButtonPressed] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatStep, setChatStep] = useState(0); 
+
+  // =======================================================
+  // ☆ LÓGICA DE AUTO-PLAY (Adicione/Substitua isto!) ☆
+  // =======================================================
+// =======================================================
+  // ☆ LÓGICA DE AUTO-PLAY CORRIGIDA ☆
+  // =======================================================
   useEffect(() => {
-    // Só ativa quando chegar no passo 8
-    if (step === 8) {
-      setPlanBuildingStatus('building'); // Força estado de carregamento
-      
-      const timer = setTimeout(() => {
-        setPlanBuildingStatus('ready'); // Libera o botão "Acessar"
-      }, 3000); // 3 segundos de loading falso
-      
-      return () => clearTimeout(timer);
+    let timers = []; 
+
+    if (step === 3) {
+      // Se já tiver resposta (ex: voltou da tela seguinte), apenas garante q tá verificado
+      if (selectedAnswer && !isVerified) {
+         setIsVerified(true);
+      } 
+      // Se NÃO tiver resposta, roda o TEATRINHO completo
+      else if (!selectedAnswer) {
+         // 1.0s: Seleciona Errado (B)
+         timers.push(setTimeout(() => setSelectedAnswer("B"), 1000));
+
+         // 2.0s: Feedback Padrão (Verifica)
+         timers.push(setTimeout(() => setIsVerified(true), 2000));
+
+         // 3.5s: Clica no botão "Corrigir com IA"
+         timers.push(setTimeout(() => setAiButtonPressed(true), 3500));
+
+         // 4.0s: Abre o Modal do Chat e solta o botão
+         timers.push(setTimeout(() => {
+           setAiButtonPressed(false);
+           setShowChatModal(true);
+         }, 4000));
+
+         // 5.0s: Mensagem do Usuário aparece
+         timers.push(setTimeout(() => setChatStep(1), 5000));
+
+         // 6.5s: Resposta da IA aparece
+         timers.push(setTimeout(() => setChatStep(2), 6500));
+      }
     }
+
+    // Efeito de "Montando Plano" do passo 8
+    if (step === 8) {
+      setPlanBuildingStatus('building');
+      const timer = setTimeout(() => {
+        setPlanBuildingStatus('ready');
+      }, 3000);
+      timers.push(timer);
+    }
+
+    return () => timers.forEach(t => clearTimeout(t));
+    
+    // 👇 A MÁGICA ESTÁ AQUI: Removemos 'selectedAnswer' das dependências.
+    // Assim, quando a resposta muda, o React NÃO cancela os timers restantes.
   }, [step]);
 
   const nextStep = (data = {}) => {
@@ -295,6 +348,9 @@ export default function OnboardingFlowScreen() {
     setSelectedAnswer(null);
     setStep((s) => s + 1);
   };
+
+
+
 const handleBack = () => {
     // 1. Se estiver nos passos seguintes (2, 3, 4...), apenas volta um slide
     if (step > 1) {
@@ -326,7 +382,7 @@ const handleBack = () => {
       <Text style={styles.progressText}>{step} / 9</Text>
     </View>
   );
-  
+
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -387,44 +443,130 @@ const handleBack = () => {
           </View>
         );
       case 3:
-        const isCorrect = selectedAnswer === dummyQuestion.answer;
-        const explanationData = isVerified ? dummyQuestion.explanation[selectedAnswer || "A"] : null;
+        const explanationData = isVerified ? dummyQuestion.explanation["B"] : null;
+
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.title}>Teste sua inteligência financeira</Text>
-            <Text style={styles.subtitle}>Responda (sem medo) para calibrarmos seu nível.</Text>
-            <View style={styles.questionCard}>
-              <Text style={styles.questionText}>{dummyQuestion.question}</Text>
-            </View>
-            {Object.entries(dummyQuestion.options).map(([key, value]) => {
-              const isSelected = selectedAnswer === key;
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[ styles.optionBtn, isSelected && !isVerified && styles.optionSelected, isVerified && key === dummyQuestion.answer && styles.optionCorrect, isVerified && isSelected && key !== dummyQuestion.answer && styles.optionIncorrect, ]}
-                  disabled={isVerified} onPress={() => setSelectedAnswer(key)}
-                >
-                  <View style={styles.iconContainer}>
-                    {isVerified && key === dummyQuestion.answer && <Check color={cores.green500} />}
-                    {isVerified && isSelected && key !== dummyQuestion.answer && <X color={cores.red500} />}
-                    {!isVerified && <Text style={styles.optionKey}>{key}</Text>}
-                    {isVerified && !isSelected && key !== dummyQuestion.answer && <Text style={styles.optionKey}>{key}</Text>}
+            <Text style={styles.title}>Professor particular 24h</Text>
+            <Text style={styles.subtitle}>Feedback imediato e chat inteligente para tirar qualquer dúvida.</Text>
+            
+            {/* --- CELULAR FAKE --- */}
+            <View style={styles.phoneFrame}>
+              <View style={styles.phoneNotch} />
+              
+              {/* CONTEÚDO DA TELA */}
+              <View style={[styles.phoneContent, {opacity: showChatModal ? 0.3 : 1}]}> 
+                  
+                  {/* Pergunta */}
+                  <Text style={styles.phoneQuestionText}>{dummyQuestion.question}</Text>
+
+                  {/* Opções */}
+                  <View style={{gap: 8, marginBottom: 16}}>
+                    {Object.entries(dummyQuestion.options).map(([key, value]) => {
+                      const isSelected = selectedAnswer === key;
+                      // Lógica de Cores:
+                      // 1. Erro: Se verificado E for a B (que selecionamos na demo) -> Vermelho
+                      const isError = isVerified && key === "B"; 
+                      // 2. Acerto: Se verificado E for a C (a resposta real) -> Verde
+                      const isCorrect = isVerified && key === dummyQuestion.answer; 
+
+                      return (
+                        <TouchableOpacity
+                          key={key} disabled={true}
+                          style={[
+                            styles.phoneOption,
+                            isSelected && styles.phoneOptionSelected, // Azul (seleção antes de verificar)
+                            isError && styles.phoneOptionError,       // Vermelho (erro)
+                            isCorrect && styles.phoneOptionCorrect,   // Verde (gabarito)
+                          ]}
+                        >
+                          <View style={[
+                              styles.phoneOptionBadge, 
+                              isSelected && {backgroundColor: cores.primary, borderColor: cores.primary},
+                              isError && {backgroundColor: cores.red500, borderColor: cores.red500},
+                              isCorrect && {backgroundColor: cores.green500, borderColor: cores.green500}
+                          ]}>
+                            <Text style={[
+                                styles.phoneOptionBadgeText, 
+                                (isSelected || isCorrect || isError) && {color: 'white'}
+                            ]}>{key}</Text>
+                          </View>
+                          <Text style={styles.phoneOptionText}>{value}</Text>
+                          
+                          {/* Ícones de Feedback */}
+                          {isError && <X size={16} color={cores.red500} style={{marginLeft: 'auto'}} />}
+                          {isCorrect && <Check size={16} color={cores.green500} style={{marginLeft: 'auto'}} />}
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
-                  <Text style={styles.optionValue}>{value}</Text>
-                </TouchableOpacity>
-              );
-            })}
-            {isVerified && explanationData && (
-              <ScrollView style={styles.explanationScroll}>
-                <View style={[ styles.explanationBox, isCorrect ? styles.explanationBoxInfo : styles.explanationBoxError ]}>
-                  <View style={[ styles.explanationHeader, isCorrect ? styles.explanationHeaderInfo : styles.explanationHeaderError ]}>
-                    <Sparkles size={16} color={isCorrect ? cores.primary : cores.red600} />
-                    <Text style={[ styles.explanationHeaderText, isCorrect ? styles.explanationHeaderTextInfo : styles.explanationHeaderTextError ]}>{explanationData.title}</Text>
+
+                  {/* FEEDBACK PADRÃO (Agora com MarkdownRenderer para Negrito) */}
+                  {isVerified && explanationData && (
+                     <View style={styles.standardFeedbackBox}>
+                        <Text style={styles.feedbackTitle}>{explanationData.title}</Text>
+                        {/* AQUI ESTÁ A CORREÇÃO DO NEGRITO: */}
+                        <MarkdownRenderer text={explanationData.text} style={styles.feedbackText} />
+                     </View>
+                  )}
+
+                  {/* BOTÃO QUE ABRE O CHAT */}
+                  {isVerified && (
+                    <Animated.View style={{transform: [{scale: aiButtonPressed ? 0.95 : 1}], marginTop: 12}}>
+                      <TouchableOpacity 
+                        activeOpacity={0.8}
+                        onPress={() => setShowChatModal(true)} 
+                        onPressIn={() => setAiButtonPressed(true)}
+                        onPressOut={() => setAiButtonPressed(false)}
+                        style={[styles.aiButton, aiButtonPressed && styles.aiButtonPressed]}
+                      >
+                         <Sparkles size={16} color="white" style={{marginRight: 6}} />
+                         <Text style={styles.aiButtonText}>Corrigir com IA</Text>
+                      </TouchableOpacity>
+                    </Animated.View>
+                  )}
+              </View>
+
+              {/* --- MODAL DE CHAT --- */}
+              {showChatModal && (
+                <View style={styles.chatModalOverlay}>
+                  <View style={styles.chatHeader}>
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                        <View style={styles.chatAvatar}>
+                          <Sparkles size={12} color="white" />
+                        </View>
+                        <Text style={styles.chatHeaderTitle}>Professor IA</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setShowChatModal(false)} hitSlop={20}>
+                      <X size={16} color={cores.gray500} />
+                    </TouchableOpacity>
                   </View>
-                  <MarkdownRenderer text={explanationData.text} style={styles.explanationText} />
+
+                  <View style={styles.chatBody}>
+                    {chatStep >= 1 && (
+                      <View style={styles.chatBubbleUser}>
+                          <Text style={styles.chatTextUser}>{dummyQuestion.chatFlow[0].text}</Text>
+                      </View>
+                    )}
+                    {chatStep >= 2 && (
+                      <View style={styles.chatBubbleAi}>
+                          {/* Chat também usa Markdown agora, por garantia */}
+                          <MarkdownRenderer text={dummyQuestion.chatFlow[1].text} style={styles.chatTextAi} />
+                      </View>
+                    )}
+                    {chatStep === 1 && (
+                        <Text style={{fontSize: 10, color: cores.gray500, marginLeft: 4, marginTop: 4}}>IA digitando...</Text>
+                    )}
+                  </View>
+
+                  <View style={styles.chatInputBar}>
+                    <View style={styles.fakeInput} />
+                    <View style={styles.sendButton} />
+                  </View>
                 </View>
-              </ScrollView>
-            )}
+              )}
+
+            </View>
           </View>
         );
       case 4:
@@ -542,10 +684,25 @@ const handleBack = () => {
             {/* Botão ACESSAR - Gatilho do Paywall */}
             <TouchableOpacity 
               style={[styles.button, {backgroundColor: cores.primary}]} 
-              onPress={handleCompleteOnboarding} // Vai direto para a Home
+              onPress={() => {
+                  if (isPro) {
+                      // Se for PRO, entra direto
+                      handleCompleteOnboarding(); 
+                  } else {
+                      // Se for FREE, mostra o Paywall
+                      setShowPaywall(true); 
+                  }
+              }}
             >
-              <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar Plano Atualizado</Text>
+              <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar Plano</Text>
             </TouchableOpacity>
+
+            {/* Modal de Paywall */}
+            {/* onClose chama handleCompleteOnboarding, ou seja, ao fechar o Paywall, vai pra Home */}
+            <PaywallModal 
+              visible={showPaywall} 
+              onClose={handleCompleteOnboarding} 
+            />
           </View>
         );
         
@@ -576,13 +733,21 @@ const handleBack = () => {
           </TouchableOpacity>
         );
       case 3:
-        return !isVerified ? (
-          <TouchableOpacity style={[styles.button, !selectedAnswer && styles.buttonDisabled]} onPress={() => setIsVerified(true)} disabled={!selectedAnswer}>
-            <Text style={styles.buttonText}>Verificar Resposta</Text>
+        // Libera SOMENTE se a IA já terminou de falar no chat (step 2)
+        // Ou se, por segurança, o chat já foi fechado/finalizado
+        const isDemoFinished = chatStep === 2; 
+
+        return isDemoFinished ? (
+          <TouchableOpacity style={styles.button} onPress={() => nextStep()}>
+            <Text style={styles.buttonText}>Que incrível! Quero começar</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={styles.button} onPress={() => nextStep()}>
-            <Text style={styles.buttonText}>Continuar</Text>
+          <TouchableOpacity style={[styles.button, styles.buttonDisabled]} disabled={true}>
+             {/* Feedback visual enquanto a demo roda */}
+             <ActivityIndicator size="small" color={cores.gray500} style={{marginRight: 8}} />
+             <Text style={[styles.buttonText, {color: cores.gray500, fontSize: 14}]}>
+                {showChatModal ? "A IA está explicando..." : "Aguarde a demonstração..."}
+             </Text>
           </TouchableOpacity>
         );
       case 4:
@@ -728,5 +893,251 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: CONTENT_MAX_WIDTH,
     alignSelf: 'center',
-  }
+  },
+  phoneFrame: {
+    width: '100%',
+    maxWidth: 300,        // Mais estreito (elegante)
+    minHeight: 580,       // <--- ADICIONE ISSO: Altura mínima de celular moderno
+    backgroundColor: '#fff',
+    borderWidth: 8,
+    borderColor: '#1e293b', 
+    borderRadius: 32,
+    padding: 16,
+    paddingTop: 32,
+    position: 'relative',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+    marginBottom: 20,
+    overflow: 'hidden',
+    alignSelf: 'center'   // Garante centralização
+  },
+  phoneNotch: {
+    position: 'absolute',
+    top: 0,
+    alignSelf: 'center',
+    width: 120,
+    height: 24,
+    backgroundColor: '#1e293b',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    zIndex: 10
+  },
+  phoneContent: {
+    flex: 1,
+  },
+  phoneQuestionText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#334155',
+    marginBottom: 16,
+    textAlign: 'center'
+  },
+  phoneOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+  },
+  phoneOptionSelected: {
+    borderColor: cores.primary,
+    backgroundColor: '#f0fdf4', // verde bem clarinho
+  },
+  phoneOptionError: {
+    borderColor: cores.red500,
+    backgroundColor: '#fef2f2', // vermelho clarinho
+  },
+  phoneOptionBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    backgroundColor: 'white'
+  },
+  phoneOptionBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#64748b'
+  },
+  phoneOptionText: {
+    fontSize: 12,
+    color: '#334155',
+    flex: 1
+  },
+  
+  // Botão IA
+  aiButton: {
+    backgroundColor: cores.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    shadowColor: cores.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 4
+  },
+  aiButtonPressed: {
+    backgroundColor: cores.green700, // Tom mais escuro para simular click
+    transform: [{scale: 0.98}]
+  },
+  aiButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 13
+  },
+  
+  // Resultado IA
+  aiResultContainer: {
+    marginTop: 12,
+    backgroundColor: '#f0fdf4',
+    borderColor: cores.primary,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+  },
+  aiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6
+  },
+  aiTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: cores.primary,
+    marginLeft: 6
+  },
+  aiText: {
+    fontSize: 11,
+    color: '#334155',
+    lineHeight: 16
+  },
+  // ... estilos anteriores ...
+  
+  // Feedback Padrão (Caixa estática)
+  standardFeedbackBox: {
+    padding: 12,
+    backgroundColor: '#fef2f2', // Vermelho bem claro
+    borderLeftWidth: 4,
+    borderLeftColor: cores.red500,
+    borderRadius: 4,
+    marginBottom: 8,
+    marginTop: 8
+  },
+  feedbackTitle: {
+    color: cores.red600,
+    fontWeight: 'bold',
+    fontSize: 12,
+    marginBottom: 4
+  },
+  feedbackText: {
+    color: '#334155',
+    fontSize: 11,
+    lineHeight: 16
+  },
+
+  // MODAL DE CHAT (Estilo WhatsApp/ChatGPT)
+  chatModalOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '65%', // Ocupa parte de baixo da tela
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 20,
+    padding: 16,
+    justifyContent: 'space-between', // Separa header, body e input
+    zIndex: 20
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: cores.gray100
+  },
+  chatAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: cores.primary,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  chatHeaderTitle: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: cores.secondary
+  },
+  chatBody: {
+    flex: 1,
+    paddingVertical: 12,
+    gap: 12
+  },
+  chatBubbleUser: {
+    alignSelf: 'flex-end',
+    backgroundColor: cores.primary,
+    padding: 10,
+    borderRadius: 12,
+    borderBottomRightRadius: 2,
+    maxWidth: '85%'
+  },
+  chatTextUser: {
+    color: 'white',
+    fontSize: 12
+  },
+  chatBubbleAi: {
+    alignSelf: 'flex-start',
+    backgroundColor: cores.gray100,
+    padding: 10,
+    borderRadius: 12,
+    borderTopLeftRadius: 2,
+    maxWidth: '90%'
+  },
+  chatTextAi: {
+    color: cores.secondary,
+    fontSize: 12,
+    lineHeight: 18
+  },
+  chatInputBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+    opacity: 0.5 // Deixa meio apagado pq é fake
+  },
+  fakeInput: {
+    flex: 1,
+    height: 36,
+    backgroundColor: cores.gray100,
+    borderRadius: 18
+  },
+  sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: cores.primary
+  },
+  phoneOptionCorrect: {
+    borderColor: cores.green500,
+    backgroundColor: cores.green50, // Verde clarinho de fundo
+  },
 });
