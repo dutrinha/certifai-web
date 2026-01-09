@@ -266,7 +266,9 @@ const AutoCarousel = () => {
 export default function OnboardingFlowScreen() {
   const navigation = useNavigation();
   const { onboardingData, updateData } = useOnboarding();
-  const { user, loading: authLoading } = useAuth(); 
+  
+  // 1. CORREÇÃO: Adicionamos 'isPro' aqui para saber se o usuário já pagou
+  const { user, loading: authLoading, isPro } = useAuth(); 
 
   const isUserReal = user && !user.is_anonymous;
   const initialStep = isUserReal ? 8 : 1;
@@ -281,12 +283,10 @@ export default function OnboardingFlowScreen() {
   const [isVerified, setIsVerified] = useState(false);
   const [name, setName] = useState('');
 
-  // =======================================================
-  // ☆ NOVOS ESTADOS PARA A DEMO (Adicione isto!) ☆
-  // =======================================================
+  // Estados da Demo (Chat)
   const [aiButtonPressed, setAiButtonPressed] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
-  const [chatStep, setChatStep] = useState(0); 
+  const [chatStep, setChatStep] = useState(0);
 
   // =======================================================
   // ☆ LÓGICA DE AUTO-PLAY (Adicione/Substitua isto!) ☆
@@ -329,13 +329,13 @@ export default function OnboardingFlowScreen() {
 
     // Efeito de "Montando Plano" do passo 8
     if (step === 8) {
-      setPlanBuildingStatus('building');
+      setPlanBuildingStatus('building'); // Força o status de construindo
       const timer = setTimeout(() => {
         setPlanBuildingStatus('ready');
-      }, 3000);
+      }, 3000); // Garante pelo menos 3 segundos de animação
+      
       timers.push(timer);
     }
-
     return () => timers.forEach(t => clearTimeout(t));
     
     // 👇 A MÁGICA ESTÁ AQUI: Removemos 'selectedAnswer' das dependências.
@@ -624,46 +624,49 @@ const handleBack = () => {
         );
 
       // ☆ PASSO 8: MONTANDO PLANO -> PRONTO -> PAYWALL/ACESSO
-      case 8:
+case 8:
         const handleCompleteOnboarding = async () => {
           try {
+            // 1. Marca no banco que o onboarding acabou
             const { error } = await supabase.auth.updateUser({
-              data: { onboarding_completed: true }
+              data: { 
+                onboarding_completed: true,
+                full_name: name 
+              }
             });
+            
             if (error) throw error;
+            
+            // 2. O App.js vai detectar essa mudança (onboarding_completed: true) 
+            // e trocar para a Home automaticamente.
+            // (O navigation.replace é um fallback de segurança)
             navigation.replace('Tabs');
+
           } catch (e) {
-            console.error("Erro ao completar onboarding:", e);
+            console.error("Erro ao salvar finalização:", e);
+            // Se der erro de rede, empurra pra Home mesmo assim pra não travar o user
             navigation.replace('Tabs');
           }
         };
 
-        // 1. Evita flash se ainda estiver carregando o user
-        if (authLoading) {
-             return (
-               <View style={styles.stepContainer}>
-                 <ActivityIndicator size="large" color={cores.primary} />
-                 <Text style={{marginTop: 16, color: cores.gray500}}>Sincronizando conta...</Text>
-               </View>
-             );
-        }
+        // Lógica de Loading (Animação de 3s ou Carregando User)
+        const isBuildingOrLoading = planBuildingStatus === 'building' || authLoading;
 
-        // 2. Tela de "Montando Plano" (3 segundos)
-        if (planBuildingStatus === 'building') {
+        if (isBuildingOrLoading) {
              return (
                <View style={styles.stepContainer}>
                  <ActivityIndicator size="large" color={cores.primary} />
                  <Text style={[styles.title, {marginTop: 24, fontSize: 22}]}>
-                    Montando seu plano de estudos personalizado...
+                   Montando seu plano de estudos personalizado...
                  </Text>
                  <Text style={styles.subtitle}>
-                    Analisando suas respostas e calibrando a IA.
+                   Analisando seu perfil e calibrando a IA.
                  </Text>
                </View>
              );
         }
 
-        // 3. Tela de "Plano Pronto" (Sucesso)
+        // Tela de Sucesso (Plano Pronto)
         return (
           <View style={styles.stepContainer}>
             <View style={{alignItems: 'center', marginBottom: 40}}>
@@ -677,39 +680,20 @@ const handleBack = () => {
                 </View>
                 <Text style={styles.title}>Seu plano está pronto!</Text>
                 <Text style={styles.subtitle}>
-                    Tudo configurado para você conquistar sua aprovação na {onboardingData.certification ? onboardingData.certification.toUpperCase() : 'certificação'}.
+                    {name ? `${name}, tudo` : "Tudo"} configurado para você conquistar sua aprovação.
                 </Text>
             </View>
             
-            {/* Botão ACESSAR - Gatilho do Paywall */}
+            {/* AQUI ESTÁ A MUDANÇA: */}
+            {/* O botão chama direto a função de finalizar, sem abrir modal */}
             <TouchableOpacity 
               style={[styles.button, {backgroundColor: cores.primary}]} 
-              onPress={() => {
-                  if (isPro) {
-                      // Se for PRO, entra direto
-                      handleCompleteOnboarding(); 
-                  } else {
-                      // Se for FREE, mostra o Paywall
-                      setShowPaywall(true); 
-                  }
-              }}
+              onPress={handleCompleteOnboarding}
             >
               <Text style={[styles.buttonText, {marginLeft: 10}]}>Acessar Plano</Text>
             </TouchableOpacity>
 
-            {/* Modal de Paywall */}
-            {/* onClose chama handleCompleteOnboarding, ou seja, ao fechar o Paywall, vai pra Home */}
-            <PaywallModal 
-              visible={showPaywall} 
-              onClose={handleCompleteOnboarding} 
-            />
-          </View>
-        );
-        
-      default:
-        return (
-          <View style={styles.stepContainer}>
-            <Text>Carregando...</Text>
+            {/* PaywallModal foi removido propositalmente daqui */}
           </View>
         );
     }
