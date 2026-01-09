@@ -4,8 +4,8 @@
 
 // CPA (e aliases): Sem 'dissertative' (Case)
 const LESSONS_CPA = [
-  { id: 1, title: "Conceitos Fundamentais", type: 'flashcard', difficulty: 'Fácil' },
-  { id: 2, title: "Quiz de Aquecimento", type: 'mc', difficulty: 'Fácil' },
+  { id: 1, title: "Teste Fundamental", type: 'mc', difficulty: 'Fácil' },
+  { id: 2, title: "Conceitos de Aquecimento", type: 'flashcard', difficulty: 'Fácil' },
   { id: 3, title: "Cenário Prático", type: 'interactive', difficulty: 'Fácil' },
   { id: 4, title: "Fixação de Termos", type: 'flashcard', difficulty: 'Fácil' },
   { id: 5, title: "Quiz: Conceitos", type: 'mc', difficulty: 'Fácil' },
@@ -23,8 +23,8 @@ const LESSONS_CPA = [
 
 // C-PRO I: Sem 'interactive'
 const LESSONS_CPROI = [
-  { id: 1, title: "Conceitos Fundamentais", type: 'flashcard', difficulty: 'Fácil' },
-  { id: 2, title: "Quiz de Aquecimento", type: 'mc', difficulty: 'Fácil' },
+  { id: 1, title: "Teste Fundamental", type: 'mc', difficulty: 'Fácil' },
+  { id: 2, title: "Conceitos de Aquecimento", type: 'flashcard', difficulty: 'Fácil' },
   { id: 3, title: "Memorização de Ativos", type: 'flashcard', difficulty: 'Fácil' }, // Substitui Interativa
   { id: 4, title: "Fixação de Termos", type: 'flashcard', difficulty: 'Fácil' },
   { id: 5, title: "Quiz: Produtos", type: 'mc', difficulty: 'Fácil' },
@@ -42,8 +42,8 @@ const LESSONS_CPROI = [
 
 // C-PRO R: Tem tudo
 const LESSONS_CPROR = [
-  { id: 1, title: "Conceitos Básicos", type: 'flashcard', difficulty: 'Fácil' },
-  { id: 2, title: "Quiz Introdutório", type: 'mc', difficulty: 'Fácil' },
+  { id: 1, title: "Teste Fundamental", type: 'mc', difficulty: 'Fácil' },
+  { id: 2, title: "Conceitos de Aquecimento", type: 'flashcard', difficulty: 'Fácil' },
   { id: 3, title: "Cenário Prático", type: 'interactive', difficulty: 'Fácil' },
   { id: 4, title: "Fixação de Termos", type: 'flashcard', difficulty: 'Fácil' },
   { id: 5, title: "Aprofundamento", type: 'mc', difficulty: 'Fácil' },
