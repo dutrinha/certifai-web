@@ -1,4 +1,4 @@
-// /App.jsx (VERSÃO CORRIGIDA - Sem Loop de Onboarding)
+// src/App.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View, StyleSheet, StatusBar, Platform } from 'react-native';
@@ -7,14 +7,16 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
+
+// Contexts
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ContentProvider } from './src/context/ContentContext';
 import { OnboardingProvider } from './src/context/OnboardingContext';
 
-// Import Pages
+// Pages
 import HomePage from './src/pages/HomePage';
 import TrilhasPage from './src/pages/TrilhasPage';
-import TopicosPage from './src/pages/TopicosPage'
+import TopicosPage from './src/pages/TopicosPage';
 import ProgressPage from './src/pages/ProgressPage';
 import SimuladoPage from './src/pages/SimuladoPage';
 import ResultadoPage from './src/pages/ResultadoPage';
@@ -32,7 +34,7 @@ import FlashCardPage from './src/pages/FlashCardPage';
 import ChatPage from './src/pages/ChatPage';
 import ModuleLessonsPage from './src/pages/ModuleLessonPage';
 
-// Import Screens
+// Screens
 import LoginScreen from './src/Screens/LoginScreen';
 import SettingsScreen from './src/Screens/SettingsScreen';
 import OnboardingNavigator from './src/Screens/OnboardingNavigator';
@@ -50,19 +52,15 @@ const linking = {
   ],
   config: {
     screens: {
-      // Rota para quem já logou (App.js decide, mas mapeamos por segurança)
       Tabs: {
         screens: {
           Início: 'home',
         },
       },
-      // A mágica acontece aqui:
       Onboarding: {
         path: 'onboarding', 
         screens: {
-          // Se entrar em certifai.com.br/onboarding -> vai pra capa (Welcome)
           Welcome: '', 
-          // Se entrar em certifai.com.br/onboarding/comecar -> VAI DIRETO PRO FLUXO!
           OnboardingFlow: 'comecar', 
         },
       },
@@ -70,13 +68,14 @@ const linking = {
     },
   },
 };
-// Cores
+
 const lightColors = {
   primary: '#00C853', secondary: '#1A202C', background: '#FFFFFF',
   card: '#FFFFFF', text: '#1A202C', textSecondary: '#64748B', border: '#E2E8F0',
 };
 
-// --- Navegadores ---
+// --- Navegadores Auxiliares ---
+
 function TrilhasNavigator() {
   return (
     <TrilhasStack.Navigator screenOptions={{ headerShown: false }}>
@@ -138,18 +137,7 @@ function AuthNavigator() {
   );
 }
 
-O erro crítico que quebrou o seu app está no arquivo App.js.
-
-Você definiu a variável da lógica como showApp, mas no return (dentro do JSX) você ainda está tentando usar a variável antiga isLoggedIn, que não existe mais. Isso gera um erro de referência (ReferenceError) e faz o app fechar ou ficar em tela branca.
-
-Aqui está a correção urgente.
-
-1. Correção no App.js (Função RootNavigator)
-Substitua a função RootNavigator inteira por esta. Note a mudança na linha do Stack.Navigator: de isLoggedIn ? para showApp ?.
-
-JavaScript
-
-// src/App.js (Ou App.jsx)
+// --- Navegador Principal (Lógica de Decisão) ---
 
 function RootNavigator() {
   const { session, user, loading: authLoading } = useAuth();
@@ -172,10 +160,11 @@ function RootNavigator() {
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {showApp ? ( // <--- CORREÇÃO AQUI: Mudamos de 'isLoggedIn' para 'showApp'
+      {showApp ? (
         // --- ÁREA LOGADA (Home) ---
         <>
           <Stack.Screen name="Tabs" component={TabNavigator} />
+
           <Stack.Screen name="cpa-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa', certificationName: 'CPA' }} />
           <Stack.Screen name="cpror-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpror', certificationName: 'C-PRO R' }} />
           <Stack.Screen name="cproi-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cproi', certificationName: 'C-PRO I' }} />
@@ -205,6 +194,8 @@ function RootNavigator() {
     </Stack.Navigator>
   );
 }
+
+// --- Componente Principal ---
 
 export default function App() {
   console.log('App: Rendering AuthProvider');
