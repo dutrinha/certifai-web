@@ -138,30 +138,44 @@ function AuthNavigator() {
   );
 }
 
+O erro crítico que quebrou o seu app está no arquivo App.js.
+
+Você definiu a variável da lógica como showApp, mas no return (dentro do JSX) você ainda está tentando usar a variável antiga isLoggedIn, que não existe mais. Isso gera um erro de referência (ReferenceError) e faz o app fechar ou ficar em tela branca.
+
+Aqui está a correção urgente.
+
+1. Correção no App.js (Função RootNavigator)
+Substitua a função RootNavigator inteira por esta. Note a mudança na linha do Stack.Navigator: de isLoggedIn ? para showApp ?.
+
+JavaScript
+
+// src/App.js (Ou App.jsx)
+
 function RootNavigator() {
   const { session, user, loading: authLoading } = useAuth();
   const colors = lightColors;
 
   if (authLoading) {
-    return (<View style={[styles.loadingContainer, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>);
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
   }
-  // Verifica se o onboarding foi explicitamente concluído no banco de dados
+
+  // Lógica de Segurança:
+  // 1. Verifica se o onboarding foi concluído no banco
   const isOnboardingCompleted = user?.user_metadata?.onboarding_completed === true;
-  // Só libera o App se estiver logado E tiver terminado o onboarding
+  
+  // 2. Só libera o App (Home) se estiver logado E tiver terminado o onboarding
   const showApp = session && user && isOnboardingCompleted;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isLoggedIn ? (
-        // --- ÁREA LOGADA ---
-        // Se está logado, entra nas Tabs.
-        // O Onboarding NÃO existe aqui, forçando o navegador a ir para a próxima tela válida (Tabs).
+      {showApp ? ( // <--- CORREÇÃO AQUI: Mudamos de 'isLoggedIn' para 'showApp'
+        // --- ÁREA LOGADA (Home) ---
         <>
           <Stack.Screen name="Tabs" component={TabNavigator} />
-          
-          <Stack.Screen name="cpa10-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa10', certificationName: 'CPA-10' }} />
-          <Stack.Screen name="cpa20-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa20', certificationName: 'CPA-20' }} />
-          <Stack.Screen name="cea-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cea', certificationName: 'CEA' }} />
           <Stack.Screen name="cpa-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpa', certificationName: 'CPA' }} />
           <Stack.Screen name="cpror-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cpror', certificationName: 'C-PRO R' }} />
           <Stack.Screen name="cproi-hub" component={CertificationHubPage} initialParams={{ certificationType: 'cproi', certificationName: 'C-PRO I' }} />
@@ -180,13 +194,9 @@ function RootNavigator() {
           <Stack.Screen name="FlashCardPage" component={FlashCardPage} />
           <Stack.Screen name="FlashCardConfigPage" component={FlashCardConfigPage} />
           <Stack.Screen name="ModuleLessonsPage" component={ModuleLessonsPage} />
-          
-          {/* SE você precisar acessar o onboarding de dentro das configurações,
-              use um nome diferente para não confundir o navegador na inicialização.
-              Ex: <Stack.Screen name="OnboardingSettings" component={OnboardingNavigator} />
-          */}
         </>
       ) : (
+        // --- ÁREA DE ONBOARDING (Ou Login Inicial) ---
         <>
           <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
           <Stack.Screen name="Auth" component={AuthNavigator} />
