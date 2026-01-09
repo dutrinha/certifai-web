@@ -145,8 +145,10 @@ function RootNavigator() {
   if (authLoading) {
     return (<View style={[styles.loadingContainer, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>);
   }
-
-  const isLoggedIn = session && user;
+  // Verifica se o onboarding foi explicitamente concluído no banco de dados
+  const isOnboardingCompleted = user?.user_metadata?.onboarding_completed === true;
+  // Só libera o App se estiver logado E tiver terminado o onboarding
+  const showApp = session && user && isOnboardingCompleted;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -185,8 +187,6 @@ function RootNavigator() {
           */}
         </>
       ) : (
-        // --- ÁREA DESLOGADA (PÚBLICA) ---
-        // O usuário começa aqui.
         <>
           <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
           <Stack.Screen name="Auth" component={AuthNavigator} />
