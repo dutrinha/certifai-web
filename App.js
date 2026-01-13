@@ -58,10 +58,10 @@ const linking = {
         },
       },
       Onboarding: {
-        path: 'onboarding', 
+        path: '', 
         screens: {
           Welcome: '', 
-          OnboardingFlow: 'comecar', 
+          OnboardingFlow: 'onboarding', 
         },
       },
       Auth: 'auth',
