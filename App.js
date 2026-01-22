@@ -47,7 +47,7 @@ const TrilhasStack = createNativeStackNavigator();
 
 const linking = {
   prefixes: [
-    'https://app.certifai.com.br'
+    'https://app.certifai.com.br',
     'https://certifai.com.br', 
     'certifai://',
   ],
